@@ -1,0 +1,12 @@
+version: '3.4'
+services:
+  seq:
+    image: datalust/seq:latest
+    ports:
+      - '4620:80'
+    networks:
+      - lark
+    environment:
+      - ACCEPT_EULA=Y
+networks:
+  lark:
