@@ -1,8 +1,4 @@
-﻿// See https://aka.ms/new-console-template for more information
-
-using System.Diagnostics;
-using Microsoft.Extensions.Logging;
-using Silk.NET.Windowing;
+﻿using Microsoft.Extensions.Logging;
 
 namespace Lark.Engine;
 
