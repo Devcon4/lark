@@ -15,6 +15,6 @@ public class Game : IHostedService {
   }
 
   public async Task StopAsync(CancellationToken cancellationToken) {
-    await engine.Dispose();
+    await engine.Cleanup();
   }
 }

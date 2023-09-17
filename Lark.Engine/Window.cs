@@ -6,7 +6,7 @@ using Silk.NET.Windowing;
 namespace Lark.Engine;
 public class LarkWindow {
 
-  private IWindow window = null!;
+  public IWindow rawWindow = null!;
   private readonly ILogger<LarkWindow> _logger;
   private readonly IHostApplicationLifetime _hostLifetime;
 
@@ -17,11 +17,11 @@ public class LarkWindow {
 
   public void Build(Action<IWindow> configure) {
     var options = WindowOptions.DefaultVulkan;
-    options.Size = new Vector2D<int>(800, 600);
     options.Title = "Lark";
-    window = Window.Create(options);
-    window.Closing += onClosing;
-    configure(window);
+    rawWindow = Window.Create(options);
+    rawWindow.Closing += onClosing;
+    configure(rawWindow);
+    rawWindow.Initialize();
   }
 
   private void onClosing() {
@@ -31,11 +31,11 @@ public class LarkWindow {
 
   public void run() {
     _logger.LogInformation("Running window...");
-    window.Run();
+    rawWindow.Run();
   }
 
-  public void Dispose() {
+  public void Cleanup() {
     _logger.LogInformation("Disposing window...");
-    window?.Dispose();
+    rawWindow?.Dispose();
   }
 }

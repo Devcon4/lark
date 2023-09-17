@@ -7,6 +7,7 @@ public static class ServiceConfiguration {
     services.AddSingleton<Engine>();
     services.AddSingleton<VulkanBuilder>();
     services.AddSingleton<LarkWindow>();
+    services.AddSingleton<ShaderBuilder>();
     return services;
   }
 }

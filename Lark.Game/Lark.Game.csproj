@@ -13,8 +13,20 @@
     <PackageReference Include="Serilog.Extensions.Hosting" Version="7.0.0" />
     <PackageReference Include="Serilog.Settings.Configuration" Version="7.0.1" />
     <PackageReference Include="Serilog.Sinks.Console" Version="4.1.0" />
+    <PackageReference Include="Serilog.Sinks.Seq" Version="5.2.2" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Lark.Engine\Lark.Engine.csproj" />
   </ItemGroup>
+
+  <Target Name="CompileShaders" BeforeTargets="Build">
+    <ItemGroup>
+      <FragFiles Include="..\**\resources\**\*.frag" />
+      <VertFiles Include="..\**\resources\**\*.vert" />
+    </ItemGroup>
+    <MakeDir Directories="$(OutDir)\resources" />
+
+    <Exec Command="glslc.exe -o &quot;$(OutDir)\resources\%(FragFiles.Filename).frag.spv&quot; &quot;%(FragFiles.FullPath)&quot;" />
+    <Exec Command="glslc.exe -o &quot;$(OutDir)\resources\%(VertFiles.Filename).vert.spv&quot; &quot;%(VertFiles.FullPath)&quot;" />
+  </Target>
 </Project>

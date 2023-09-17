@@ -1,0 +1,10 @@
+// default csharp .editorconfig
+
+root = true
+  
+[*.cs]
+
+# Indentation and spacing
+indent_style = space
+indent_size = 2
+csharp_new_line_before_open_brace = none
