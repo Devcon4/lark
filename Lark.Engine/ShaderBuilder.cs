@@ -7,27 +7,20 @@ using Microsoft.Extensions.Logging;
 namespace Lark.Engine {
 
   // Waiting for Silk.NET 2.18.0 which will have spirv support.
-  public class ShaderBuilder {
-
-    private readonly ILogger<ShaderBuilder> _logger;
-
-    public ShaderBuilder(ILogger<ShaderBuilder> logger) {
-      _logger = logger;
-    }
-
+  public class ShaderBuilder(ILogger<ShaderBuilder> logger) {
     public byte[] LoadShader(string shaderName) {
-      _logger.LogInformation("Loading shader {ShaderName}", shaderName);
+      logger.LogInformation("Loading shader {ShaderName}", shaderName);
       var path = Path.Join(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), $"./resources/{shaderName}.spv");
 
       if (!File.Exists(path)) {
-        _logger.LogError("Shader {ShaderName} does not exist at {ShaderPath}", shaderName, path);
+        logger.LogError("Shader {ShaderName} does not exist at {ShaderPath}", shaderName, path);
         throw new FileNotFoundException($"Shader {shaderName} does not exist at {path}");
       }
 
       var content = File.ReadAllBytes(path);
 
       if (content.Length == 0) {
-        _logger.LogError("Shader {ShaderName} is empty.", shaderName);
+        logger.LogError("Shader {ShaderName} is empty.", shaderName);
         throw new FileLoadException($"Shader {shaderName} is empty.");
       }
 

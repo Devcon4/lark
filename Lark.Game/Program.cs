@@ -1,12 +1,13 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using Lark.Engine;
+using Lark.Game;
 using Microsoft.Extensions.Hosting;
 using Serilog;
-using Serilog.Events;
 
 var builder = Host.CreateApplicationBuilder(args);
 
 builder.Services
   .AddLarkEngine()
+  .AddVulkanPipeline()
   .AddGame()
   .AddSerilog(new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)

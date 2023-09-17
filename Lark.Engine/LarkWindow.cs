@@ -4,38 +4,31 @@ using Silk.NET.Maths;
 using Silk.NET.Windowing;
 
 namespace Lark.Engine;
-public class LarkWindow {
+public class LarkWindow(ILogger<LarkWindow> logger, IHostApplicationLifetime hostLifetime) {
 
   public IWindow rawWindow = null!;
-  private readonly ILogger<LarkWindow> _logger;
-  private readonly IHostApplicationLifetime _hostLifetime;
-
-  public LarkWindow(ILogger<LarkWindow> logger, IHostApplicationLifetime hostLifetime) {
-    _logger = logger;
-    _hostLifetime = hostLifetime;
-  }
 
   public void Build(Action<IWindow> configure) {
     var options = WindowOptions.DefaultVulkan;
     options.Title = "Lark";
     rawWindow = Window.Create(options);
-    rawWindow.Closing += onClosing;
+    rawWindow.Closing += OnClosing;
     configure(rawWindow);
     rawWindow.Initialize();
   }
 
-  private void onClosing() {
+  private void OnClosing() {
     // Need to shutdown the host when the window closes.
-    _hostLifetime.StopApplication();
+    hostLifetime.StopApplication();
   }
 
-  public void run() {
-    _logger.LogInformation("Running window...");
+  public void Run() {
+    logger.LogInformation("Running window...");
     rawWindow.Run();
   }
 
   public void Cleanup() {
-    _logger.LogInformation("Disposing window...");
+    logger.LogInformation("Disposing window...");
     rawWindow?.Dispose();
   }
 }
