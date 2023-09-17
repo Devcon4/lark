@@ -29,4 +29,11 @@
     <Exec Command="glslc.exe -o &quot;$(OutDir)\resources\%(FragFiles.Filename).frag.spv&quot; &quot;%(FragFiles.FullPath)&quot;" />
     <Exec Command="glslc.exe -o &quot;$(OutDir)\resources\%(VertFiles.Filename).vert.spv&quot; &quot;%(VertFiles.FullPath)&quot;" />
   </Target>
+
+  <Target Name="CopyResources" AfterTargets="Publish">
+    <ItemGroup>
+      <ResourceFiles Include="resources\**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(ResourceFiles)" DestinationFolder="$(PublishDir)\resources\%(RecursiveDir)" />
+  </Target>
 </Project>
