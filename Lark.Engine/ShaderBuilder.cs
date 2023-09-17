@@ -20,8 +20,8 @@ namespace Lark.Engine {
       var path = Path.Join(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), $"./resources/{shaderName}.spv");
 
       if (!File.Exists(path)) {
-        _logger.LogError("Shader {ShaderName} does not exist.", shaderName);
-        throw new FileNotFoundException($"Shader {shaderName} does not exist.");
+        _logger.LogError("Shader {ShaderName} does not exist at {ShaderPath}", shaderName, path);
+        throw new FileNotFoundException($"Shader {shaderName} does not exist at {path}");
       }
 
       var content = File.ReadAllBytes(path);

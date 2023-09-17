@@ -29,11 +29,16 @@
     <Exec Command="glslc.exe -o &quot;$(OutDir)\resources\%(FragFiles.Filename).frag.spv&quot; &quot;%(FragFiles.FullPath)&quot;" />
     <Exec Command="glslc.exe -o &quot;$(OutDir)\resources\%(VertFiles.Filename).vert.spv&quot; &quot;%(VertFiles.FullPath)&quot;" />
   </Target>
-
-  <Target Name="CopyResources" AfterTargets="Publish">
+  
+  <Target Name="CompileShaders" BeforeTargets="Publish">
     <ItemGroup>
-      <ResourceFiles Include="resources\**\*" />
+      <FragFiles Include="..\**\resources\**\*.frag" />
+      <VertFiles Include="..\**\resources\**\*.vert" />
     </ItemGroup>
-    <Copy SourceFiles="@(ResourceFiles)" DestinationFolder="$(PublishDir)\resources\%(RecursiveDir)" />
-  </Target>
+    <MakeDir Directories="$(PublishDir)\resources" />
+
+    <Exec Command="glslc.exe -o &quot;$(PublishDir)\resources\%(FragFiles.Filename).frag.spv&quot; &quot;%(FragFiles.FullPath)&quot;" />
+    <Exec Command="glslc.exe -o &quot;$(PublishDir)\resources\%(VertFiles.Filename).vert.spv&quot; &quot;%(VertFiles.FullPath)&quot;" />
+  </Target>  
+
 </Project>
