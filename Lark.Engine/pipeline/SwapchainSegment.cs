@@ -72,6 +72,11 @@ public class SwapchainSegment(LarkVulkanData data,
     };
 
     var indices = queueFamilyUtil.FindQueueFamilies(data.PhysicalDevice);
+
+    if (indices.GraphicsFamily == null || indices.PresentFamily == null) {
+      throw new Exception("Failed to find queue families.");
+    }
+
     uint[] queueFamilyIndices = { indices.GraphicsFamily.Value, indices.PresentFamily.Value };
 
     fixed (uint* qfiPtr = queueFamilyIndices) {
@@ -91,9 +96,15 @@ public class SwapchainSegment(LarkVulkanData data,
 
       createInfo.OldSwapchain = default;
 
+      if (data.vk.CurrentDevice is null)
+        throw new Exception("Current device is null.");
+
       if (!data.vk.TryGetDeviceExtension(data.Instance, data.vk.CurrentDevice.Value, out data.VkSwapchain)) {
         throw new NotSupportedException("KHR_data.Swapchain extension not found.");
       }
+
+      if (data.VkSwapchain is null)
+        throw new Exception("VkSwapchain is null.");
 
       fixed (SwapchainKHR* swapchain = &data.Swapchain) {
         if (data.VkSwapchain.CreateSwapchain(data.Device, &createInfo, null, swapchain) != Result.Success) {
@@ -130,6 +141,9 @@ public class SwapchainSegment(LarkVulkanData data,
     foreach (var imageView in data.SwapchainImageViews) {
       data.vk.DestroyImageView(data.Device, imageView, null);
     }
+
+    if (data.VkSwapchain is null)
+      throw new Exception("VkSwapchain is null.");
 
     data.VkSwapchain.DestroySwapchain(data.Device, data.Swapchain, null);
   }

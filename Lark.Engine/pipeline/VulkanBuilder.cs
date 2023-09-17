@@ -55,10 +55,10 @@ public class VulkanBuilder(
     larkVulkanData.vk.DestroyDevice(larkVulkanData.Device, null);
 
     if (larkVulkanData.EnableValidationLayers) {
-      larkVulkanData.DebugUtils.DestroyDebugUtilsMessenger(larkVulkanData.Instance, larkVulkanData.DebugMessenger, null);
+      larkVulkanData.DebugUtils?.DestroyDebugUtilsMessenger(larkVulkanData.Instance, larkVulkanData.DebugMessenger, null);
     }
 
-    larkVulkanData.VkSurface.DestroySurface(larkVulkanData.Instance, larkVulkanData.Surface, null);
+    larkVulkanData.VkSurface?.DestroySurface(larkVulkanData.Instance, larkVulkanData.Surface, null);
     larkVulkanData.vk.DestroyInstance(larkVulkanData.Instance, null);
   }
 
@@ -69,6 +69,8 @@ public class VulkanBuilder(
   public unsafe void DrawFrame(double obj) {
     var fence = larkVulkanData.InFlightFences[larkVulkanData.CurrentFrame];
     larkVulkanData.vk.WaitForFences(larkVulkanData.Device, 1, in fence, Vk.True, ulong.MaxValue);
+
+    if (larkVulkanData.VkSwapchain is null) throw new Exception("Swapchain is null");
 
     uint imageIndex;
     Result result = larkVulkanData.VkSwapchain.AcquireNextImage

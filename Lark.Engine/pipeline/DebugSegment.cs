@@ -11,7 +11,7 @@ public class DebugSegment(LarkVulkanData data) {
     populateDebugMessengerCreateInfo(ref createInfo);
 
     fixed (DebugUtilsMessengerEXT* debugMessenger = &data.DebugMessenger) {
-      if (data.DebugUtils.CreateDebugUtilsMessenger(data.Instance, &createInfo, null, debugMessenger) != Result.Success) {
+      if (data.DebugUtils?.CreateDebugUtilsMessenger(data.Instance, &createInfo, null, debugMessenger) != Result.Success) {
         throw new Exception("Failed to create debug messenger.");
       }
     }

@@ -42,9 +42,9 @@ public class LarkVulkanData {
 
   public bool FramebufferResized;
 
-  public KhrSurface VkSurface;
-  public KhrSwapchain VkSwapchain;
-  public ExtDebugUtils DebugUtils;
+  public KhrSurface? VkSurface;
+  public KhrSwapchain? VkSwapchain;
+  public ExtDebugUtils? DebugUtils;
 
   public string[]? ValidationLayers;
 

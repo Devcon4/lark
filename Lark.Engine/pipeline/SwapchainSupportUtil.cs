@@ -9,6 +9,9 @@ public class SwapchainSupportUtil(LarkVulkanData data) {
   // Caching the returned values breaks the ability for resizing the window
   public unsafe SwapChainSupportDetails QuerySwapChainSupport(PhysicalDevice device) {
     var details = new SwapChainSupportDetails();
+
+    if (data.VkSurface is null) throw new Exception("Surface is null");
+
     data.VkSurface.GetPhysicalDeviceSurfaceCapabilities(device, data.Surface, out var surfaceCapabilities);
     details.Capabilities = surfaceCapabilities;
 

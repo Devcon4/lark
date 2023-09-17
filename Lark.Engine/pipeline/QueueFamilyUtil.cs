@@ -26,6 +26,8 @@ public class QueueFamilyUtil(LarkVulkanData data) {
         indices.GraphicsFamily = i;
       }
 
+      if (data.VkSurface is null) continue;
+
       data.VkSurface.GetPhysicalDeviceSurfaceSupport(device, i, data.Surface, out var presentSupport);
 
       if (presentSupport == Vk.True) {

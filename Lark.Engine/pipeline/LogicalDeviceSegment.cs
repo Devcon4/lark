@@ -8,6 +8,11 @@ namespace Lark.Engine.Pipeline;
 public class LogicalDeviceSegment(LarkVulkanData data, QueueFamilyUtil queueFamilyUtil, ILogger<LogicalDeviceSegment> logger) {
   public unsafe void CreateLogicalDevice() {
     var indices = queueFamilyUtil.FindQueueFamilies(data.PhysicalDevice);
+
+    if (indices.GraphicsFamily is null || indices.PresentFamily is null) {
+      throw new Exception("Failed to find queue families.");
+    }
+
     var uniqueQueueFamilies = indices.GraphicsFamily.Value == indices.PresentFamily.Value
         ? new[] { indices.GraphicsFamily.Value }
         : new[] { indices.GraphicsFamily.Value, indices.PresentFamily.Value };
@@ -28,17 +33,23 @@ public class LogicalDeviceSegment(LarkVulkanData data, QueueFamilyUtil queueFami
 
     var deviceFeatures = new PhysicalDeviceFeatures();
 
-    var createInfo = new DeviceCreateInfo();
-    createInfo.SType = StructureType.DeviceCreateInfo;
-    createInfo.QueueCreateInfoCount = (uint)uniqueQueueFamilies.Length;
-    createInfo.PQueueCreateInfos = queueCreateInfos;
-    createInfo.PEnabledFeatures = &deviceFeatures;
-    createInfo.EnabledExtensionCount = (uint)data.DeviceExtensions.Length;
+    var createInfo = new DeviceCreateInfo {
+      SType = StructureType.DeviceCreateInfo,
+      QueueCreateInfoCount = (uint)uniqueQueueFamilies.Length,
+      PQueueCreateInfos = queueCreateInfos,
+      PEnabledFeatures = &deviceFeatures,
+      EnabledExtensionCount = (uint)data.DeviceExtensions.Length
+    };
 
     var enabledExtensionNames = SilkMarshal.StringArrayToPtr(data.DeviceExtensions);
     createInfo.PpEnabledExtensionNames = (byte**)enabledExtensionNames;
 
     if (data.EnableValidationLayers) {
+
+      if (data.ValidationLayers == null) {
+        throw new Exception("Validation layers are enabled but no layers are specified.");
+      }
+
       createInfo.EnabledLayerCount = (uint)data.ValidationLayers.Length;
       createInfo.PpEnabledLayerNames = (byte**)SilkMarshal.StringArrayToPtr(data.ValidationLayers);
     }

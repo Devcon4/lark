@@ -6,9 +6,13 @@ public class CommandPoolSegment(LarkVulkanData data, QueueFamilyUtil queueFamily
   public unsafe void CreateCommandPool() {
     var queueFamilyIndices = queueFamilyUtil.FindQueueFamilies(data.PhysicalDevice);
 
+    if (queueFamilyIndices.GraphicsFamily == null) {
+      throw new Exception("failed to find graphics queue family!");
+    }
+
     var poolInfo = new CommandPoolCreateInfo {
       SType = StructureType.CommandPoolCreateInfo,
-      QueueFamilyIndex = queueFamilyIndices.GraphicsFamily.Value
+      QueueFamilyIndex = queueFamilyIndices.GraphicsFamily.Value,
     };
 
     fixed (CommandPool* commandPool = &data.CommandPool) {

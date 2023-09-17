@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 namespace Lark.Engine.Pipeline;
 
 public class InstanceSegment(LarkWindow window, LarkVulkanData data) {
-  private unsafe string[]? getOptimalValidationLayers() {
+  private unsafe string[]? GetOptimalValidationLayers() {
     var layerCount = 0u;
     data.vk.EnumerateInstanceLayerProperties(&layerCount, (LayerProperties*)0);
 
@@ -31,7 +31,7 @@ public class InstanceSegment(LarkWindow window, LarkVulkanData data) {
     }
 
     if (data.EnableValidationLayers) {
-      data.ValidationLayers = getOptimalValidationLayers();
+      data.ValidationLayers = GetOptimalValidationLayers();
       if (data.ValidationLayers is null) {
         throw new NotSupportedException("Validation layers requested, but not available!");
       }
@@ -68,6 +68,10 @@ public class InstanceSegment(LarkWindow window, LarkVulkanData data) {
     createInfo.PpEnabledExtensionNames = newExtensions;
 
     if (data.EnableValidationLayers) {
+
+      if (data.ValidationLayers is null) {
+        throw new Exception("Validation layers requested, but not available!");
+      }
       createInfo.EnabledLayerCount = (uint)data.ValidationLayers.Length;
       createInfo.PpEnabledLayerNames = (byte**)SilkMarshal.StringArrayToPtr(data.ValidationLayers);
     }
