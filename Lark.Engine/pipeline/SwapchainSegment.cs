@@ -14,11 +14,11 @@ public class SwapchainSegment(LarkVulkanData data,
     CommandBufferSegment commandBufferSegment
     ) {
   public unsafe void RecreateSwapChain() {
-    Vector2D<int> framebufferSize = larkWindow.rawWindow.FramebufferSize;
+    Vector2D<int> framebufferSize = larkWindow.FramebufferSize;
 
     while (framebufferSize.X == 0 || framebufferSize.Y == 0) {
-      framebufferSize = larkWindow.rawWindow.FramebufferSize;
-      larkWindow.rawWindow.DoEvents();
+      framebufferSize = larkWindow.FramebufferSize;
+      larkWindow.DoEvents();
     }
 
     _ = data.vk.DeviceWaitIdle(data.Device);
@@ -28,7 +28,7 @@ public class SwapchainSegment(LarkVulkanData data,
     // TODO: On SDL it is possible to get an invalid swap chain when the window is minimized.
     // This check can be removed when the above frameBufferSize check catches it.
     while (!CreateSwapChain()) {
-      larkWindow.rawWindow.DoEvents();
+      larkWindow.DoEvents();
     }
 
     CreateSwapChain();
@@ -153,7 +153,7 @@ public class SwapchainSegment(LarkVulkanData data,
       return capabilities.CurrentExtent;
     }
 
-    var actualExtent = new Extent2D { Height = (uint)larkWindow.rawWindow.FramebufferSize.Y, Width = (uint)larkWindow.rawWindow.FramebufferSize.X };
+    var actualExtent = new Extent2D { Height = (uint)larkWindow.FramebufferSize.Y, Width = (uint)larkWindow.FramebufferSize.X };
     actualExtent.Width = new[]
     {
                 capabilities.MinImageExtent.Width,

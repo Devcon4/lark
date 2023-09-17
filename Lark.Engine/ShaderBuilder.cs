@@ -10,7 +10,7 @@ namespace Lark.Engine {
   public class ShaderBuilder(ILogger<ShaderBuilder> logger) {
     public byte[] LoadShader(string shaderName) {
       logger.LogInformation("Loading shader {ShaderName}", shaderName);
-      var path = Path.Join(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), $"./resources/{shaderName}.spv");
+      var path = Path.Join(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), $"./resources/shaders/{shaderName}.spv");
 
       if (!File.Exists(path)) {
         logger.LogError("Shader {ShaderName} does not exist at {ShaderPath}", shaderName, path);

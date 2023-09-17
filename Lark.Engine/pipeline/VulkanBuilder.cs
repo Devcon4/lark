@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Silk.NET.Maths;
 using Silk.NET.Vulkan;
 using Semaphore = Silk.NET.Vulkan.Semaphore;
 
@@ -6,7 +7,7 @@ namespace Lark.Engine.Pipeline;
 
 public class VulkanBuilder(
     ILogger<VulkanBuilder> logger,
-    LarkVulkanData larkVulkanData,
+    LarkVulkanData data,
     InstanceSegment instanceSegment,
     DebugSegment debugSegment,
     SurfaceSegment surfaceSegment,
@@ -21,8 +22,6 @@ public class VulkanBuilder(
     CommandBufferSegment commandBufferSegment,
     SyncSegment syncSegment
     ) {
-  public const bool EventBasedRendering = false;
-
   public void InitVulkan() {
     logger.LogInformation("Initializing Vulkan...");
 
@@ -45,36 +44,52 @@ public class VulkanBuilder(
     swapchainSegment.CleanupSwapchain();
 
     for (var i = 0; i < LarkVulkanData.MaxFramesInFlight; i++) {
-      larkVulkanData.vk.DestroySemaphore(larkVulkanData.Device, larkVulkanData.RenderFinishedSemaphores[i], null);
-      larkVulkanData.vk.DestroySemaphore(larkVulkanData.Device, larkVulkanData.ImageAvailableSemaphores[i], null);
-      larkVulkanData.vk.DestroyFence(larkVulkanData.Device, larkVulkanData.InFlightFences[i], null);
+      data.vk.DestroySemaphore(data.Device, data.RenderFinishedSemaphores[i], null);
+      data.vk.DestroySemaphore(data.Device, data.ImageAvailableSemaphores[i], null);
+      data.vk.DestroyFence(data.Device, data.InFlightFences[i], null);
     }
 
-    larkVulkanData.vk.DestroyCommandPool(larkVulkanData.Device, larkVulkanData.CommandPool, null);
+    data.vk.DestroyCommandPool(data.Device, data.CommandPool, null);
 
-    larkVulkanData.vk.DestroyDevice(larkVulkanData.Device, null);
+    data.vk.DestroyDevice(data.Device, null);
 
-    if (larkVulkanData.EnableValidationLayers) {
-      larkVulkanData.DebugUtils?.DestroyDebugUtilsMessenger(larkVulkanData.Instance, larkVulkanData.DebugMessenger, null);
+    if (data.EnableValidationLayers) {
+      data.DebugUtils?.DestroyDebugUtilsMessenger(data.Instance, data.DebugMessenger, null);
     }
 
-    larkVulkanData.VkSurface?.DestroySurface(larkVulkanData.Instance, larkVulkanData.Surface, null);
-    larkVulkanData.vk.DestroyInstance(larkVulkanData.Instance, null);
+    data.VkSurface?.DestroySurface(data.Instance, data.Surface, null);
+    data.vk.DestroyInstance(data.Instance, null);
   }
 
   public void Wait() {
-    larkVulkanData.vk.DeviceWaitIdle(larkVulkanData.Device);
+    data.vk.DeviceWaitIdle(data.Device);
   }
 
-  public unsafe void DrawFrame(double obj) {
-    var fence = larkVulkanData.InFlightFences[larkVulkanData.CurrentFrame];
-    larkVulkanData.vk.WaitForFences(larkVulkanData.Device, 1, in fence, Vk.True, ulong.MaxValue);
+  // currentFrame
 
-    if (larkVulkanData.VkSwapchain is null) throw new Exception("Swapchain is null");
+  public int currentFrame = 0;
+  public DateTime lastFrame = DateTime.Now;
+
+  public unsafe void DrawFrame() {
+    currentFrame++;
+
+    // Time sense last frame
+    var now = DateTime.Now;
+    var deltaTime = now - lastFrame;
+    lastFrame = now;
+
+    var fps = 1 / deltaTime.TotalSeconds;
+
+    // logger.LogInformation("{currentFrame} \t:: Δ {deltaTime}ms \t:: {fps}", currentFrame, deltaTime.TotalMilliseconds, fps);
+
+    var fence = data.InFlightFences[data.CurrentFrame];
+    data.vk.WaitForFences(data.Device, 1, in fence, Vk.True, ulong.MaxValue);
+
+    if (data.VkSwapchain is null) throw new Exception("Swapchain is null");
 
     uint imageIndex;
-    Result result = larkVulkanData.VkSwapchain.AcquireNextImage
-        (larkVulkanData.Device, larkVulkanData.Swapchain, ulong.MaxValue, larkVulkanData.ImageAvailableSemaphores[larkVulkanData.CurrentFrame], default, &imageIndex);
+    Result result = data.VkSwapchain.AcquireNextImage
+        (data.Device, data.Swapchain, ulong.MaxValue, data.ImageAvailableSemaphores[data.CurrentFrame], default, &imageIndex);
 
     if (result == Result.ErrorOutOfDateKhr) {
       swapchainSegment.RecreateSwapChain();
@@ -84,40 +99,40 @@ public class VulkanBuilder(
       throw new Exception("failed to acquire swap chain image!");
     }
 
-    if (larkVulkanData.ImagesInFlight[imageIndex].Handle != 0) {
-      larkVulkanData.vk.WaitForFences(larkVulkanData.Device, 1, in larkVulkanData.ImagesInFlight[imageIndex], Vk.True, ulong.MaxValue);
+    if (data.ImagesInFlight[imageIndex].Handle != 0) {
+      data.vk.WaitForFences(data.Device, 1, in data.ImagesInFlight[imageIndex], Vk.True, ulong.MaxValue);
     }
 
-    larkVulkanData.ImagesInFlight[imageIndex] = larkVulkanData.InFlightFences[larkVulkanData.CurrentFrame];
+    data.ImagesInFlight[imageIndex] = data.InFlightFences[data.CurrentFrame];
 
     SubmitInfo submitInfo = new SubmitInfo { SType = StructureType.SubmitInfo };
 
-    Semaphore[] waitSemaphores = { larkVulkanData.ImageAvailableSemaphores[larkVulkanData.CurrentFrame] };
+    Semaphore[] waitSemaphores = { data.ImageAvailableSemaphores[data.CurrentFrame] };
     PipelineStageFlags[] waitStages = { PipelineStageFlags.ColorAttachmentOutputBit };
     submitInfo.WaitSemaphoreCount = 1;
-    var signalSemaphore = larkVulkanData.RenderFinishedSemaphores[larkVulkanData.CurrentFrame];
+    var signalSemaphore = data.RenderFinishedSemaphores[data.CurrentFrame];
     fixed (Semaphore* waitSemaphoresPtr = waitSemaphores) {
       fixed (PipelineStageFlags* waitStagesPtr = waitStages) {
         submitInfo.PWaitSemaphores = waitSemaphoresPtr;
         submitInfo.PWaitDstStageMask = waitStagesPtr;
 
         submitInfo.CommandBufferCount = 1;
-        var buffer = larkVulkanData.CommandBuffers[imageIndex];
+        var buffer = data.CommandBuffers[imageIndex];
         submitInfo.PCommandBuffers = &buffer;
 
         submitInfo.SignalSemaphoreCount = 1;
         submitInfo.PSignalSemaphores = &signalSemaphore;
 
-        larkVulkanData.vk.ResetFences(larkVulkanData.Device, 1, &fence);
+        data.vk.ResetFences(data.Device, 1, &fence);
 
-        if (larkVulkanData.vk.QueueSubmit
-                (larkVulkanData.GraphicsQueue, 1, &submitInfo, larkVulkanData.InFlightFences[larkVulkanData.CurrentFrame]) != Result.Success) {
+        if (data.vk.QueueSubmit
+                (data.GraphicsQueue, 1, &submitInfo, data.InFlightFences[data.CurrentFrame]) != Result.Success) {
           throw new Exception("failed to submit draw command buffer!");
         }
       }
     }
 
-    fixed (SwapchainKHR* swapchain = &larkVulkanData.Swapchain) {
+    fixed (SwapchainKHR* swapchain = &data.Swapchain) {
       PresentInfoKHR presentInfo = new PresentInfoKHR {
         SType = StructureType.PresentInfoKhr,
         WaitSemaphoreCount = 1,
@@ -127,17 +142,23 @@ public class VulkanBuilder(
         PImageIndices = &imageIndex
       };
 
-      result = larkVulkanData.VkSwapchain.QueuePresent(larkVulkanData.PresentQueue, &presentInfo);
+      result = data.VkSwapchain.QueuePresent(data.PresentQueue, &presentInfo);
     }
 
-    if (result == Result.ErrorOutOfDateKhr || result == Result.SuboptimalKhr || larkVulkanData.FramebufferResized) {
-      larkVulkanData.FramebufferResized = false;
+    if (result == Result.ErrorOutOfDateKhr || result == Result.SuboptimalKhr || data.FramebufferResized) {
+      data.FramebufferResized = false;
       swapchainSegment.RecreateSwapChain();
     }
     else if (result != Result.Success) {
       throw new Exception("failed to present swap chain image!");
     }
 
-    larkVulkanData.CurrentFrame = (larkVulkanData.CurrentFrame + 1) % LarkVulkanData.MaxFramesInFlight;
+    data.CurrentFrame = (data.CurrentFrame + 1) % LarkVulkanData.MaxFramesInFlight;
+  }
+
+  public void FramebufferResize(Vector2D<int> size) {
+    data.FramebufferResized = true;
+    swapchainSegment.RecreateSwapChain();
+    // larkWindow.rawWindow.DoRender();
   }
 }

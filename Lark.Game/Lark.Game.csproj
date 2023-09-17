@@ -20,26 +20,19 @@
     <ProjectReference Include="..\Lark.Engine\Lark.Engine.csproj" />
   </ItemGroup>
 
+  <Target Name="MakeDir" BeforeTargets="Build">
+    <MakeDir Directories=".\resources" />
+    <MakeDir Directories=".\resources\shaders" />
+  </Target>
+
   <Target Name="CompileShaders" BeforeTargets="Build">
     <ItemGroup>
-      <FragFiles Include="..\**\resources\**\*.frag" />
-      <VertFiles Include="..\**\resources\**\*.vert" />
+      <ShaderFiles Include=".\resources\shaders\**\*.*"/>
     </ItemGroup>
+
     <MakeDir Directories="$(OutDir)\resources" />
+    <MakeDir Directories="$(OutDir)\resources\shaders" />
 
-    <Exec Command="glslc.exe -o &quot;$(OutDir)\resources\%(FragFiles.Filename).frag.spv&quot; &quot;%(FragFiles.FullPath)&quot;" />
-    <Exec Command="glslc.exe -o &quot;$(OutDir)\resources\%(VertFiles.Filename).vert.spv&quot; &quot;%(VertFiles.FullPath)&quot;" />
+    <Exec Command="glslc.exe -o &quot;$(OutDir)%(ShaderFiles.Identity).spv&quot; &quot;%(ShaderFiles.Identity)&quot;" />
   </Target>
-  
-  <Target Name="CompileShaders" BeforeTargets="Publish">
-    <ItemGroup>
-      <FragFiles Include="..\**\resources\**\*.frag" />
-      <VertFiles Include="..\**\resources\**\*.vert" />
-    </ItemGroup>
-    <MakeDir Directories="$(PublishDir)\resources" />
-
-    <Exec Command="glslc.exe -o &quot;$(PublishDir)\resources\%(FragFiles.Filename).frag.spv&quot; &quot;%(FragFiles.FullPath)&quot;" />
-    <Exec Command="glslc.exe -o &quot;$(PublishDir)\resources\%(VertFiles.Filename).vert.spv&quot; &quot;%(VertFiles.FullPath)&quot;" />
-  </Target>  
-
 </Project>

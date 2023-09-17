@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Silk.NET.Core;
 using Silk.NET.Core.Native;
 using Silk.NET.Vulkan;
@@ -5,7 +6,7 @@ using System.Runtime.InteropServices;
 
 namespace Lark.Engine.Pipeline;
 
-public class InstanceSegment(LarkWindow window, LarkVulkanData data) {
+public class InstanceSegment(LarkWindow window, LarkVulkanData data, ILogger<InstanceSegment> logger) {
   private unsafe string[]? GetOptimalValidationLayers() {
     var layerCount = 0u;
     data.vk.EnumerateInstanceLayerProperties(&layerCount, (LayerProperties*)0);
@@ -26,7 +27,7 @@ public class InstanceSegment(LarkWindow window, LarkVulkanData data) {
   }
 
   public unsafe void CreateInstance() {
-    if (window.rawWindow.VkSurface is null) {
+    if (window.VulkanSupported() is false) {
       throw new NotSupportedException("Windowing platform doesn't support Vulkan.");
     }
 
@@ -48,10 +49,14 @@ public class InstanceSegment(LarkWindow window, LarkVulkanData data) {
 
     var createInfo = new InstanceCreateInfo {
       SType = StructureType.InstanceCreateInfo,
-      PApplicationInfo = &appInfo
+      PApplicationInfo = &appInfo,
     };
 
-    var extensions = window.rawWindow.VkSurface.GetRequiredExtensions(out var extCount);
+    var extensions = window.GetRequiredInstanceExtensions(out var extCount);
+
+    // Log extensions and extcount
+
+    // var extensions = window.rawWindow.VkSurface.GetRequiredExtensions(out var extCount);
     // TODO Review that this count doesn't realistically exceed 1k (recommended max for stackalloc)
     // Should probably be allocated on heap anyway as this isn't super performance critical.
     var newExtensions = stackalloc byte*[(int)(extCount + data.InstanceExtensions.Length)];
