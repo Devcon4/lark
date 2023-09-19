@@ -9,9 +9,9 @@
 			"type": "coreclr",
 			"request": "launch",
 			"preLaunchTask": "build",
-			"program": "${workspaceFolder}/Lark.Engine/bin/Debug/net8.0/Lark.Engine.dll",
+			"program": "${workspaceFolder}/Lark.Game/bin/Debug/net8.0/Lark.Game.dll",
 			"args": [],
-			"cwd": "${workspaceFolder}/Lark.Engine",
+			"cwd": "${workspaceFolder}/Lark.Game",
 			"console": "internalConsole",
 			"stopAtEntry": false,
 			"env": {

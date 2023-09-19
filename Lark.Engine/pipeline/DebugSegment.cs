@@ -1,8 +1,9 @@
 using System.Runtime.InteropServices;
+using Microsoft.Extensions.Logging;
 using Silk.NET.Vulkan;
 
 namespace Lark.Engine.Pipeline;
-public class DebugSegment(LarkVulkanData data) {
+public class DebugSegment(LarkVulkanData data, ILogger<DebugSegment> logger) {
   public unsafe void SetupDebugMessenger() {
     if (!data.EnableValidationLayers) return;
     if (!data.vk.TryGetInstanceExtension(data.Instance, out data.DebugUtils)) return;
@@ -33,7 +34,7 @@ public class DebugSegment(LarkVulkanData data) {
       DebugUtilsMessengerCallbackDataEXT* pCallbackData,
       void* pUserData) {
     if (messageSeverity > DebugUtilsMessageSeverityFlagsEXT.VerboseBitExt) {
-      Console.WriteLine($"{messageSeverity} {messageTypes}" + Marshal.PtrToStringAnsi((nint)pCallbackData->PMessage));
+      logger.LogError("{messageSeverity} {messageTypes} {message}", messageSeverity, messageTypes, Marshal.PtrToStringAnsi((nint)pCallbackData->PMessage));
     }
 
     return Vk.False;

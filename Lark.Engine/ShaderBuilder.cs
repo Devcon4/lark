@@ -1,7 +1,5 @@
 
 using System.Reflection;
-using System.Resources;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace Lark.Engine {
@@ -9,7 +7,6 @@ namespace Lark.Engine {
   // Waiting for Silk.NET 2.18.0 which will have spirv support.
   public class ShaderBuilder(ILogger<ShaderBuilder> logger) {
     public byte[] LoadShader(string shaderName) {
-      logger.LogInformation("Loading shader {ShaderName}", shaderName);
       var path = Path.Join(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), $"./resources/shaders/{shaderName}.spv");
 
       if (!File.Exists(path)) {

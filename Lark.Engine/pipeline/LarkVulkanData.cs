@@ -2,6 +2,7 @@ using Silk.NET.Vulkan;
 using Silk.NET.Vulkan.Extensions.EXT;
 using Silk.NET.Vulkan.Extensions.KHR;
 using Semaphore = Silk.NET.Vulkan.Semaphore;
+using Buffer = Silk.NET.Vulkan.Buffer;
 
 namespace Lark.Engine.Pipeline;
 
@@ -28,16 +29,47 @@ public class LarkVulkanData {
   public Framebuffer[] SwapchainFramebuffers = null!;
 
   public RenderPass RenderPass;
+  public DescriptorSetLayout DescriptorSetLayout;
+
   public PipelineLayout PipelineLayout;
   public Silk.NET.Vulkan.Pipeline GraphicsPipeline;
 
+  public Buffer VertexBuffer;
+  public Buffer IndexBuffer;
+
+  public Image NormalImage;
+  public DeviceMemory NormalImageMemory;
+  public ImageView NormalImageView;
+  public Sampler NormalSampler;
+
+  public Image TextureImage;
+  public DeviceMemory TextureImageMemory;
+  public ImageView TextureImageView;
+  public Sampler TextureSampler;
+
+  public Image DepthImage;
+  public DeviceMemory DepthImageMemory;
+  public ImageView DepthImageView;
+
+
   public CommandPool CommandPool;
+  public DescriptorPool DescriptorPool;
+  public DescriptorSet[] DescriptorSets = null!;
+
+  public Image[] SwapChainImages = null!;
+
+  public Buffer[] UniformBuffers = null!;
+  public DeviceMemory[] UniformBuffersMemory = null!;
+
   public CommandBuffer[] CommandBuffers = null!;
 
   public Semaphore[] ImageAvailableSemaphores = null!;
   public Semaphore[] RenderFinishedSemaphores = null!;
   public Fence[] InFlightFences = null!;
   public Fence[] ImagesInFlight = null!;
+
+  public Fence CommandFence;
+
   public uint CurrentFrame;
 
   public bool FramebufferResized;

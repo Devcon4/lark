@@ -15,5 +15,6 @@
     <PackageReference Include="SharpGLTF.Core" Version="1.0.0-alpha0030" />
     <PackageReference Include="silk.NET" Version="2.17.1" />
     <PackageReference Include="Silk.NET.Vulkan.Extensions.EXT" Version="2.17.1" />
+    <PackageReference Include="SkiaSharp" Version="2.88.6-preview.1.2" />
   </ItemGroup>
 </Project>

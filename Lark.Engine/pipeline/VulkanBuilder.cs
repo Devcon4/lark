@@ -10,14 +10,18 @@ public class VulkanBuilder(
     LarkVulkanData data,
     InstanceSegment instanceSegment,
     DebugSegment debugSegment,
+    DescriptorSetSegment descriptorSetSegment,
     SurfaceSegment surfaceSegment,
     PhysicalDeviceSegment physicalDeviceSegment,
     LogicalDeviceSegment logicalDeviceSegment,
     SwapchainSegment swapchainSegment,
+    UniformBufferSegment uniformBufferSegment,
     ImageViewSegment imageViewSegment,
     RenderPassSegment renderPassSegment,
     GraphicsPipelineSegment graphicsPipelineSegment,
     FramebufferSegment framebufferSegment,
+    TextureSegment textureSegment,
+    SamplerSegment samplerSegment,
     CommandPoolSegment commandPoolSegment,
     CommandBufferSegment commandBufferSegment,
     SyncSegment syncSegment
@@ -33,14 +37,24 @@ public class VulkanBuilder(
     swapchainSegment.CreateSwapChain();
     imageViewSegment.CreateImageViews();
     renderPassSegment.CreateRenderPass();
+    descriptorSetSegment.CreateDescriptorSetLayout();
     graphicsPipelineSegment.CreateGraphicsPipeline();
-    framebufferSegment.CreateFramebuffers();
     commandPoolSegment.CreateCommandPool();
+
+
+    framebufferSegment.CreateFramebuffers();
+    textureSegment.CreateTextureImage();
+    textureSegment.CreateTextureImageView();
+    samplerSegment.CreateTextureSampler();
+    uniformBufferSegment.CreateUniformBuffers();
+    descriptorSetSegment.CreateDescriptorPool();
+    descriptorSetSegment.CreateDescriptorSets();
     commandBufferSegment.CreateCommandBuffers();
     syncSegment.CreateSyncObjects();
   }
 
   public unsafe void Cleanup() {
+    uniformBufferSegment.CleanupUniformBuffers();
     swapchainSegment.CleanupSwapchain();
 
     for (var i = 0; i < LarkVulkanData.MaxFramesInFlight; i++) {

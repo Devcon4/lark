@@ -1,8 +1,9 @@
+using Microsoft.Extensions.Logging;
 using Silk.NET.Vulkan;
 
 namespace Lark.Engine.Pipeline;
 
-public class FramebufferSegment(LarkVulkanData data) {
+public class FramebufferSegment(LarkVulkanData data, ILogger<FramebufferSegment> logger) {
   public unsafe void CreateFramebuffers() {
     data.SwapchainFramebuffers = new Framebuffer[data.SwapchainImageViews.Length];
 
@@ -25,5 +26,7 @@ public class FramebufferSegment(LarkVulkanData data) {
 
       data.SwapchainFramebuffers[i] = framebuffer;
     }
+
+    logger.LogInformation("Created framebuffers.");
   }
 }

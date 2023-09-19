@@ -23,16 +23,20 @@
   <Target Name="MakeDir" BeforeTargets="Build">
     <MakeDir Directories=".\resources" />
     <MakeDir Directories=".\resources\shaders" />
+    <MakeDir Directories=".\resources\textures" />
   </Target>
 
   <Target Name="CompileShaders" BeforeTargets="Build">
     <ItemGroup>
       <ShaderFiles Include=".\resources\shaders\**\*.*"/>
+      <TextureFiles Include=".\resources\textures\**\*.*"/>
     </ItemGroup>
 
     <MakeDir Directories="$(OutDir)\resources" />
     <MakeDir Directories="$(OutDir)\resources\shaders" />
+    <MakeDir Directories="$(OutDir)\resources\textures" />
 
     <Exec Command="glslc.exe -o &quot;$(OutDir)%(ShaderFiles.Identity).spv&quot; &quot;%(ShaderFiles.Identity)&quot;" />
+    <Copy SourceFiles="@(TextureFiles)" DestinationFolder="$(OutDir)resources\textures" />
   </Target>
 </Project>

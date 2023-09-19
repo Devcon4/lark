@@ -1,9 +1,10 @@
+using Microsoft.Extensions.Logging;
 using Silk.NET.Vulkan;
 using Semaphore = Silk.NET.Vulkan.Semaphore;
 
 namespace Lark.Engine.Pipeline;
 
-public class SyncSegment(LarkVulkanData data) {
+public class SyncSegment(LarkVulkanData data, ILogger<SyncSegment> logger) {
   public unsafe void CreateSyncObjects() {
     data.ImageAvailableSemaphores = new Semaphore[LarkVulkanData.MaxFramesInFlight];
     data.RenderFinishedSemaphores = new Semaphore[LarkVulkanData.MaxFramesInFlight];
@@ -32,5 +33,19 @@ public class SyncSegment(LarkVulkanData data) {
       data.RenderFinishedSemaphores[i] = renderFinSema;
       data.InFlightFences[i] = inFlightFence;
     }
+
+    // make commandFence
+    FenceCreateInfo commandFenceInfo = new() {
+      SType = StructureType.FenceCreateInfo,
+      Flags = FenceCreateFlags.SignaledBit
+    };
+
+    Fence commandFence;
+    if (data.vk.CreateFence(data.Device, &commandFenceInfo, null, &commandFence) != Result.Success) {
+      throw new Exception("failed to create command fence!");
+    }
+    data.CommandFence = commandFence;
+
+    logger.LogInformation("Created synchronization objects.");
   }
 }

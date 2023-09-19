@@ -13,24 +13,32 @@ public static class ServiceConfiguration {
   }
 
   public static IServiceCollection AddVulkanPipeline(this IServiceCollection services) {
-    services.AddSingleton<VulkanBuilder>();
     services.AddSingleton<LarkVulkanData>();
-    services.AddSingleton<SwapchainSupportUtil>();
     services.AddSingleton<QueueFamilyUtil>();
+    services.AddSingleton<BufferUtils>();
+    services.AddSingleton<CommandUtils>();
+    services.AddSingleton<ImageUtils>();
 
+    services.AddSingleton<VulkanBuilder>();
+    services.AddSingleton<SwapchainSupportUtil>();
     services.AddSingleton<InstanceSegment>();
     services.AddSingleton<DebugSegment>();
     services.AddSingleton<SurfaceSegment>();
     services.AddSingleton<PhysicalDeviceSegment>();
     services.AddSingleton<LogicalDeviceSegment>();
     services.AddSingleton<SwapchainSegment>();
+    services.AddSingleton<UniformBufferSegment>();
     services.AddSingleton<ImageViewSegment>();
     services.AddSingleton<RenderPassSegment>();
+    services.AddSingleton<DescriptorSetSegment>();
     services.AddSingleton<GraphicsPipelineSegment>();
     services.AddSingleton<FramebufferSegment>();
+    services.AddSingleton<TextureSegment>();
+    services.AddSingleton<SamplerSegment>();
     services.AddSingleton<CommandPoolSegment>();
     services.AddSingleton<CommandBufferSegment>();
     services.AddSingleton<SyncSegment>();
+
     return services;
   }
 }

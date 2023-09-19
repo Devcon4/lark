@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 
 namespace Lark.Engine.Pipeline;
 
-public class InstanceSegment(LarkWindow window, LarkVulkanData data, ILogger<InstanceSegment> logger) {
+public class InstanceSegment(LarkWindow window, LarkVulkanData data) {
   private unsafe string[]? GetOptimalValidationLayers() {
     var layerCount = 0u;
     data.vk.EnumerateInstanceLayerProperties(&layerCount, (LayerProperties*)0);

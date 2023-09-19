@@ -1,8 +1,9 @@
+using Microsoft.Extensions.Logging;
 using Silk.NET.Vulkan;
 
 namespace Lark.Engine.Pipeline;
 
-public class CommandPoolSegment(LarkVulkanData data, QueueFamilyUtil queueFamilyUtil) {
+public class CommandPoolSegment(LarkVulkanData data, QueueFamilyUtil queueFamilyUtil, ILogger<CommandPoolSegment> logger) {
   public unsafe void CreateCommandPool() {
     var queueFamilyIndices = queueFamilyUtil.FindQueueFamilies(data.PhysicalDevice);
 
@@ -20,6 +21,8 @@ public class CommandPoolSegment(LarkVulkanData data, QueueFamilyUtil queueFamily
         throw new Exception("failed to create command pool!");
       }
     }
+
+    logger.LogInformation("Created command pool.");
   }
 
 }
