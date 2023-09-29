@@ -32,6 +32,7 @@ public class LogicalDeviceSegment(LarkVulkanData data, QueueFamilyUtil queueFami
     }
 
     var deviceFeatures = new PhysicalDeviceFeatures();
+    deviceFeatures.SamplerAnisotropy = true;
 
     var createInfo = new DeviceCreateInfo {
       SType = StructureType.DeviceCreateInfo,

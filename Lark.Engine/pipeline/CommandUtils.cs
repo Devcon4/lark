@@ -13,15 +13,14 @@ public class CommandUtils(LarkVulkanData data, ILogger<CommandUtils> logger) {
       CommandBufferCount = 1
     };
 
-    CommandBuffer commandBuffer;
-    data.vk.AllocateCommandBuffers(data.Device, &allocInfo, &commandBuffer);
+    data.vk.AllocateCommandBuffers(data.Device, allocInfo, out CommandBuffer commandBuffer);
 
     var beginInfo = new CommandBufferBeginInfo {
       SType = StructureType.CommandBufferBeginInfo,
       Flags = CommandBufferUsageFlags.OneTimeSubmitBit
     };
 
-    data.vk.BeginCommandBuffer(commandBuffer, &beginInfo);
+    data.vk.BeginCommandBuffer(commandBuffer, beginInfo);
 
     return commandBuffer;
   }
@@ -35,9 +34,9 @@ public class CommandUtils(LarkVulkanData data, ILogger<CommandUtils> logger) {
       PCommandBuffers = &commandBuffer
     };
 
-    data.vk.QueueSubmit(data.GraphicsQueue, 1, &submitInfo, data.CommandFence);
+    data.vk.QueueSubmit(data.GraphicsQueue, 1, submitInfo, default);
     data.vk.QueueWaitIdle(data.GraphicsQueue);
 
-    data.vk.FreeCommandBuffers(data.Device, data.CommandPool, 1, &commandBuffer);
+    data.vk.FreeCommandBuffers(data.Device, data.CommandPool, 1, commandBuffer);
   }
 }

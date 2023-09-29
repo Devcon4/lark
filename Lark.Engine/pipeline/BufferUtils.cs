@@ -8,9 +8,24 @@ public struct BufferAllocInfo {
   public SharingMode SharingMode;
 }
 
+public struct LarkBuffer {
+  public Buffer Buffer;
+  public DeviceMemory Memory;
+
+  public unsafe void Dispose(LarkVulkanData data) {
+    data.vk.DestroyBuffer(data.Device, Buffer, null);
+    data.vk.FreeMemory(data.Device, Memory, null);
+  }
+}
+
 public class BufferUtils(LarkVulkanData data, CommandUtils commandUtils) {
 
-  public unsafe void CreateBuffer(ulong size, BufferAllocInfo allocInfo, out Buffer buffer, out DeviceMemory bufferMemory) {
+  // CreateBuffer: wrapper which uses a LarkBuffer struct.
+  public unsafe void CreateBuffer(ulong size, BufferAllocInfo allocInfo, ref LarkBuffer buffer) {
+    CreateBuffer(size, allocInfo, ref buffer.Buffer, ref buffer.Memory);
+  }
+
+  public unsafe void CreateBuffer(ulong size, BufferAllocInfo allocInfo, ref Buffer buffer, ref DeviceMemory bufferMemory) {
     var bufferInfo = new BufferCreateInfo {
       SType = StructureType.BufferCreateInfo,
       Size = size,

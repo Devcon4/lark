@@ -3,12 +3,23 @@ using Silk.NET.Vulkan.Extensions.EXT;
 using Silk.NET.Vulkan.Extensions.KHR;
 using Semaphore = Silk.NET.Vulkan.Semaphore;
 using Buffer = Silk.NET.Vulkan.Buffer;
+using Image = Silk.NET.Vulkan.Image;
+using Silk.NET.Maths;
+using Lark.Engine.Model;
 
 namespace Lark.Engine.Pipeline;
+
+public struct DescriptorLayouts {
+  public DescriptorSetLayout matricies;
+  public DescriptorSetLayout textures;
+}
 
 public class LarkVulkanData {
   public readonly Vk vk = Vk.GetApi();
   public const int MaxFramesInFlight = 8;
+
+  public List<LarkModel> models = new();
+  public List<LarkCamera> cameras = new();
 
   public bool EnableValidationLayers = true;
 
@@ -29,13 +40,15 @@ public class LarkVulkanData {
   public Framebuffer[] SwapchainFramebuffers = null!;
 
   public RenderPass RenderPass;
-  public DescriptorSetLayout DescriptorSetLayout;
+  public DescriptorLayouts Layouts;
 
   public PipelineLayout PipelineLayout;
   public Silk.NET.Vulkan.Pipeline GraphicsPipeline;
 
-  public Buffer VertexBuffer;
-  public Buffer IndexBuffer;
+  // public Buffer VertexBuffer;
+  // public DeviceMemory VertexBufferMemory;
+  // public Buffer IndexBuffer;
+  // public DeviceMemory IndexBufferMemory;
 
   public Image NormalImage;
   public DeviceMemory NormalImageMemory;
@@ -58,8 +71,11 @@ public class LarkVulkanData {
 
   public Image[] SwapChainImages = null!;
 
-  public Buffer[] UniformBuffers = null!;
-  public DeviceMemory[] UniformBuffersMemory = null!;
+  public LarkBuffer[] UniformBuffers;
+
+  // public Buffer[] UniformBuffers = null!;
+  // public DeviceMemory[] UniformBuffersMemory = null!;
+  // public unsafe void*[] UniformBuffersMapped = null!;
 
   public CommandBuffer[] CommandBuffers = null!;
 
@@ -91,4 +107,38 @@ public class LarkVulkanData {
     "VK_LAYER_GOOGLE_unique_objects",
     }
   };
+
+  // public Vertex[] Vertices = new Vertex[]
+  //   {
+
+  //     new Vertex { Pos = new Vector3D<float>(-0.5f,-0.5f, 0f), Color = new Vector3D<float>(1.0f, 0.0f, 0.0f), UV = new Vector2D<float>(1.0f, 0.0f) },
+  //     new Vertex { Pos = new Vector3D<float>(0.5f,-0.5f, 0f), Color = new Vector3D<float>(0.0f, 1.0f, 0.0f), UV = new Vector2D<float>(0.0f, 0.0f) },
+  //     new Vertex { Pos = new Vector3D<float>(0.5f,0.5f, 0f), Color = new Vector3D<float>(0.0f, 0.0f, 1.0f), UV = new Vector2D<float>(0.0f, 1.0f) },
+  //     new Vertex { Pos = new Vector3D<float>(-0.5f,0.5f, 0f), Color = new Vector3D<float>(1.0f, 1.0f, 1.0f), UV = new Vector2D<float>(1.0f, 1.0f) },
+
+  //     new Vertex { Pos = new Vector3D<float>(-0.5f,-0.5f, -0.5f), Color = new Vector3D<float>(1.0f, 0.0f, 0.0f), UV = new Vector2D<float>(1.0f, 0.0f) },
+  //     new Vertex { Pos = new Vector3D<float>(0.5f,-0.5f, -0.5f), Color = new Vector3D<float>(0.0f, 1.0f, 0.0f), UV = new Vector2D<float>(0.0f, 0.0f) },
+  //     new Vertex { Pos = new Vector3D<float>(0.5f,0.5f, -0.5f), Color = new Vector3D<float>(0.0f, 0.0f, 1.0f), UV = new Vector2D<float>(0.0f, 1.0f) },
+  //     new Vertex { Pos = new Vector3D<float>(-0.5f,0.5f, -0.5f), Color = new Vector3D<float>(1.0f, 1.0f, 1.0f), UV = new Vector2D<float>(1.0f, 1.0f) },
+  //   };
+
+  // public ushort[] Indices = new ushort[]
+  // {
+  //       0, 1, 2, 2, 3, 0,
+  //       4, 5, 6, 6, 7, 4
+  // };
+
+  // public Memory<Vertex> Vertices = new(new Vertex[]{
+  //   new(new(-0.5f, -0.5f, 0.0f), new(0.0f, 0.0f), new(1.0f, 0.0f, 0.0f)),
+
+  //   new(new(0.5f, -0.5f, 0.0f), new(1.0f, 0.0f), new(0.0f, 1.0f, 0.0f)),
+  //   new(new(0.5f, 0.5f, 0.0f), new(1.0f, 1.0f), new(0.0f, 0.0f, 1.0f)),
+  //   new(new(-0.5f, 0.5f, 0.0f), new(0.0f, 1.0f), new(1.0f, 1.0f, 1.0f)),
+  //   new(new(-0.5f, -0.5f, -0.5f), new(0.0f, 0.0f), new(1.0f, 0.0f, 0.0f)),
+  //   new(new(0.5f, -0.5f, -0.5f), new(1.0f, 0.0f), new(0.0f, 1.0f, 0.0f)),
+  //   new(new(0.5f, 0.5f, -0.5f), new(1.0f, 1.0f), new(0.0f, 0.0f, 1.0f)),
+  //   new(new(-0.5f, 0.5f, -0.5f), new(0.0f, 1.0f), new(1.0f, 1.0f, 1.0f))
+  // });
+
+  // public Memory<ushort> Indices = new(new ushort[] { 0, 1, 2, 2, 3, 0, 4, 5, 6, 6, 7, 4 });
 }

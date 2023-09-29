@@ -7,9 +7,7 @@ namespace Lark.Engine.Pipeline;
 public class TextureSegment(LarkVulkanData data, ImageUtils imageUtils, ILogger<TextureSegment> logger) {
 
   public void CreateTextureImage() {
-    imageUtils.CreateTexture("owl-1.jpg", out var textureImage, out var textureImageMemory);
-    data.TextureImage = textureImage;
-    data.TextureImageMemory = textureImageMemory;
+    imageUtils.CreateTexture("owl-1.jpg", ref data.TextureImage, ref data.TextureImageMemory);
   }
 
   public void CreateTextureImageView() {

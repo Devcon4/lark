@@ -24,19 +24,23 @@
     <MakeDir Directories=".\resources" />
     <MakeDir Directories=".\resources\shaders" />
     <MakeDir Directories=".\resources\textures" />
+    <MakeDir Directories=".\resources\models" />
   </Target>
 
   <Target Name="CompileShaders" BeforeTargets="Build">
     <ItemGroup>
       <ShaderFiles Include=".\resources\shaders\**\*.*"/>
       <TextureFiles Include=".\resources\textures\**\*.*"/>
+      <ModelFiles Include=".\resources\models\**\*.*"/>
     </ItemGroup>
 
     <MakeDir Directories="$(OutDir)\resources" />
     <MakeDir Directories="$(OutDir)\resources\shaders" />
     <MakeDir Directories="$(OutDir)\resources\textures" />
+    <MakeDir Directories="$(OutDir)\resources\models" />
 
     <Exec Command="glslc.exe -o &quot;$(OutDir)%(ShaderFiles.Identity).spv&quot; &quot;%(ShaderFiles.Identity)&quot;" />
-    <Copy SourceFiles="@(TextureFiles)" DestinationFolder="$(OutDir)resources\textures" />
+    <Copy SourceFiles="@(TextureFiles)" DestinationFolder="$(OutDir)resources\textures\%(RecursiveDir)" />
+    <Copy SourceFiles="@(ModelFiles)" DestinationFolder="$(OutDir)resources\models\%(RecursiveDir)" />
   </Target>
 </Project>

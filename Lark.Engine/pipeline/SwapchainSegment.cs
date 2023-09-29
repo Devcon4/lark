@@ -1,5 +1,8 @@
+using Lark.Engine.Model;
+using Microsoft.Extensions.Logging;
 using Silk.NET.Maths;
 using Silk.NET.Vulkan;
+using Image = Silk.NET.Vulkan.Image;
 
 namespace Lark.Engine.Pipeline;
 
@@ -10,8 +13,13 @@ public class SwapchainSegment(LarkVulkanData data,
     ImageViewSegment imageViewSegment,
     RenderPassSegment renderPassSegment,
     GraphicsPipelineSegment graphicsPipelineSegment,
+    DepthSegment depthSegment,
     FramebufferSegment framebufferSegment,
-    CommandBufferSegment commandBufferSegment
+    UniformBufferSegment uniformBufferSegment,
+    DescriptorSetSegment descriptorSetSegment,
+    ModelUtils modelUtils,
+    CommandBufferSegment commandBufferSegment,
+    ILogger<SwapchainSegment> logger
     ) {
   public unsafe void RecreateSwapChain() {
     Vector2D<int> framebufferSize = larkWindow.FramebufferSize;
@@ -35,7 +43,17 @@ public class SwapchainSegment(LarkVulkanData data,
     imageViewSegment.CreateImageViews();
     renderPassSegment.CreateRenderPass();
     graphicsPipelineSegment.CreateGraphicsPipeline();
+    depthSegment.CreateDepthResources();
     framebufferSegment.CreateFramebuffers();
+    uniformBufferSegment.CreateUniformBuffer();
+    // descriptorSetSegment.CreateDescriptorPool();
+    // descriptorSetSegment.CreateDescriptorSets();
+
+    foreach (var model in data.models) {
+      modelUtils.CreateDescriptorPool(model);
+      modelUtils.CreateDescriptorSets(model);
+    }
+
     commandBufferSegment.CreateCommandBuffers();
 
     data.ImagesInFlight = new Fence[data.SwapchainImages.Length];
@@ -122,10 +140,16 @@ public class SwapchainSegment(LarkVulkanData data,
     data.SwapchainImageFormat = surfaceFormat.Format;
     data.SwapchainExtent = extent;
 
+    logger.LogInformation("Created swapchain.");
+
     return true;
   }
 
   public unsafe void CleanupSwapchain() {
+    data.vk.DestroyImageView(data.Device, data.DepthImageView, null);
+    data.vk.DestroyImage(data.Device, data.DepthImage, null);
+    data.vk.FreeMemory(data.Device, data.DepthImageMemory, null);
+
     foreach (var framebuffer in data.SwapchainFramebuffers) {
       data.vk.DestroyFramebuffer(data.Device, framebuffer, null);
     }

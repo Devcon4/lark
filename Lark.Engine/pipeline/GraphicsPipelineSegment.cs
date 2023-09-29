@@ -1,13 +1,14 @@
 using Microsoft.Extensions.Logging;
 using Silk.NET.Core.Native;
+using Silk.NET.Maths;
 using Silk.NET.Vulkan;
 
 namespace Lark.Engine.Pipeline;
 
 public class GraphicsPipelineSegment(LarkVulkanData data, ShaderBuilder shaderBuilder, ILogger<GraphicsPipelineSegment> logger) {
   public unsafe void CreateGraphicsPipeline() {
-    var vertShaderInfo = shaderBuilder.LoadShader("triangle.vert");
-    var fragShaderInfo = shaderBuilder.LoadShader("triangle.frag");
+    var vertShaderInfo = shaderBuilder.LoadShader("mesh.vert");
+    var fragShaderInfo = shaderBuilder.LoadShader("mesh.frag");
 
     var vertShaderModule = CreateShaderModule(vertShaderInfo);
     var fragShaderModule = CreateShaderModule(fragShaderInfo);
@@ -26,110 +27,148 @@ public class GraphicsPipelineSegment(LarkVulkanData data, ShaderBuilder shaderBu
       PName = (byte*)SilkMarshal.StringToPtr("main")
     };
 
-    var shaderStages = stackalloc PipelineShaderStageCreateInfo[2];
-    shaderStages[0] = vertShaderStageInfo;
-    shaderStages[1] = fragShaderStageInfo;
+    var shaderStages = stackalloc[] { vertShaderStageInfo, fragShaderStageInfo };
 
-    var vertexInputInfo = new PipelineVertexInputStateCreateInfo {
-      SType = StructureType.PipelineVertexInputStateCreateInfo,
-      VertexBindingDescriptionCount = 0,
-      VertexAttributeDescriptionCount = 0
-    };
+    var bindingDescription = Vertex.GetBindingDescription();
+    var attributeDescriptions = Vertex.GetAttributeDescriptions();
+    var d = data.Layouts;
 
-    var inputAssembly = new PipelineInputAssemblyStateCreateInfo {
-      SType = StructureType.PipelineInputAssemblyStateCreateInfo,
-      Topology = PrimitiveTopology.TriangleList,
-      PrimitiveRestartEnable = Vk.False
-    };
+    var setLayouts = new[] { data.Layouts.matricies, data.Layouts.textures };
 
-    var viewport = new Viewport {
-      X = 0.0f,
-      Y = 0.0f,
-      Width = data.SwapchainExtent.Width,
-      Height = data.SwapchainExtent.Height,
-      MinDepth = 0.0f,
-      MaxDepth = 1.0f
-    };
+    fixed (VertexInputAttributeDescription* attributeDescriptionsPtr = attributeDescriptions)
+    fixed (DescriptorSetLayout* setLayoutsPtr = setLayouts) {
 
-    var scissor = new Rect2D { Offset = default, Extent = data.SwapchainExtent };
+      var vertexInputInfo = new PipelineVertexInputStateCreateInfo {
+        SType = StructureType.PipelineVertexInputStateCreateInfo,
+        VertexBindingDescriptionCount = 1,
+        PVertexBindingDescriptions = &bindingDescription,
+        VertexAttributeDescriptionCount = (uint)attributeDescriptions.Length,
+        PVertexAttributeDescriptions = attributeDescriptionsPtr
+      };
 
-    var viewportState = new PipelineViewportStateCreateInfo {
-      SType = StructureType.PipelineViewportStateCreateInfo,
-      ViewportCount = 1,
-      PViewports = &viewport,
-      ScissorCount = 1,
-      PScissors = &scissor
-    };
+      var inputAssembly = new PipelineInputAssemblyStateCreateInfo {
+        SType = StructureType.PipelineInputAssemblyStateCreateInfo,
+        Topology = PrimitiveTopology.TriangleList,
+        PrimitiveRestartEnable = Vk.False
+      };
 
-    var rasterizer = new PipelineRasterizationStateCreateInfo {
-      SType = StructureType.PipelineRasterizationStateCreateInfo,
-      DepthClampEnable = Vk.False,
-      RasterizerDiscardEnable = Vk.False,
-      PolygonMode = PolygonMode.Fill,
-      LineWidth = 1.0f,
-      CullMode = CullModeFlags.BackBit,
-      FrontFace = FrontFace.Clockwise,
-      DepthBiasEnable = Vk.False
-    };
+      var viewport = new Viewport {
+        X = 0.0f,
+        Y = 0.0f,
+        Width = data.SwapchainExtent.Width,
+        Height = data.SwapchainExtent.Height,
+        MinDepth = 0.0f,
+        MaxDepth = 1.0f
+      };
 
-    var multisampling = new PipelineMultisampleStateCreateInfo {
-      SType = StructureType.PipelineMultisampleStateCreateInfo,
-      SampleShadingEnable = Vk.False,
-      RasterizationSamples = SampleCountFlags.Count1Bit
-    };
+      var scissor = new Rect2D { Offset = default, Extent = data.SwapchainExtent };
 
-    var colorBlendAttachment = new PipelineColorBlendAttachmentState {
-      ColorWriteMask = ColorComponentFlags.RBit |
-                         ColorComponentFlags.GBit |
-                         ColorComponentFlags.BBit |
-                         ColorComponentFlags.ABit,
-      BlendEnable = Vk.False
-    };
+      var viewportState = new PipelineViewportStateCreateInfo {
+        SType = StructureType.PipelineViewportStateCreateInfo,
+        ViewportCount = 1,
+        PViewports = &viewport,
+        ScissorCount = 1,
+        PScissors = &scissor
+      };
 
-    var colorBlending = new PipelineColorBlendStateCreateInfo {
-      SType = StructureType.PipelineColorBlendStateCreateInfo,
-      LogicOpEnable = Vk.False,
-      LogicOp = LogicOp.Copy,
-      AttachmentCount = 1,
-      PAttachments = &colorBlendAttachment
-    };
+      var rasterizer = new PipelineRasterizationStateCreateInfo {
+        SType = StructureType.PipelineRasterizationStateCreateInfo,
+        DepthClampEnable = Vk.False,
+        RasterizerDiscardEnable = Vk.False,
+        PolygonMode = PolygonMode.Fill,
+        LineWidth = 1f,
+        CullMode = CullModeFlags.BackBit,
+        FrontFace = FrontFace.CounterClockwise,
+        DepthBiasEnable = Vk.False
+      };
 
-    colorBlending.BlendConstants[0] = 0.0f;
-    colorBlending.BlendConstants[1] = 0.0f;
-    colorBlending.BlendConstants[2] = 0.0f;
-    colorBlending.BlendConstants[3] = 0.0f;
+      var multisampling = new PipelineMultisampleStateCreateInfo {
+        SType = StructureType.PipelineMultisampleStateCreateInfo,
+        SampleShadingEnable = Vk.False,
+        RasterizationSamples = SampleCountFlags.Count1Bit
+      };
 
-    var pipelineLayoutInfo = new PipelineLayoutCreateInfo {
-      SType = StructureType.PipelineLayoutCreateInfo,
-      SetLayoutCount = 0,
-      PushConstantRangeCount = 0
-    };
+      var depthStencil = new PipelineDepthStencilStateCreateInfo {
+        SType = StructureType.PipelineDepthStencilStateCreateInfo,
+        DepthTestEnable = true,
+        DepthWriteEnable = true,
+        DepthCompareOp = CompareOp.Less,
+        DepthBoundsTestEnable = false,
+        StencilTestEnable = false
+      };
 
-    fixed (PipelineLayout* pipelineLayout = &data.PipelineLayout) {
-      if (data.vk.CreatePipelineLayout(data.Device, &pipelineLayoutInfo, null, pipelineLayout) != Result.Success) {
+      var colorBlendAttachment = new PipelineColorBlendAttachmentState {
+        ColorWriteMask = ColorComponentFlags.RBit |
+                           ColorComponentFlags.GBit |
+                           ColorComponentFlags.BBit |
+                           ColorComponentFlags.ABit,
+        BlendEnable = Vk.False
+      };
+
+      var colorBlending = new PipelineColorBlendStateCreateInfo {
+        SType = StructureType.PipelineColorBlendStateCreateInfo,
+        LogicOpEnable = Vk.False,
+        LogicOp = LogicOp.Copy,
+        AttachmentCount = 1,
+        PAttachments = &colorBlendAttachment
+      };
+
+      colorBlending.BlendConstants[0] = 0.0f;
+      colorBlending.BlendConstants[1] = 0.0f;
+      colorBlending.BlendConstants[2] = 0.0f;
+      colorBlending.BlendConstants[3] = 0.0f;
+
+      var dynamicStates = stackalloc[] {
+        DynamicState.Viewport,
+        DynamicState.LineWidth
+      };
+
+      var dynamicState = new PipelineDynamicStateCreateInfo {
+        SType = StructureType.PipelineDynamicStateCreateInfo,
+        DynamicStateCount = 2,
+        PDynamicStates = dynamicStates
+      };
+
+      //TODO: setup push constants.
+      var pushConstantRange = new PushConstantRange {
+        StageFlags = ShaderStageFlags.VertexBit,
+        Size = (uint)sizeof(Matrix4X4<float>),
+        Offset = 0
+      };
+
+      var pipelineLayoutInfo = new PipelineLayoutCreateInfo {
+        SType = StructureType.PipelineLayoutCreateInfo,
+        SetLayoutCount = (uint)setLayouts.Length,
+        PushConstantRangeCount = 1,
+        PPushConstantRanges = &pushConstantRange,
+        PSetLayouts = setLayoutsPtr
+      };
+
+      if (data.vk.CreatePipelineLayout(data.Device, &pipelineLayoutInfo, null, out data.PipelineLayout) != Result.Success) {
         throw new Exception("failed to create pipeline layout!");
       }
-    }
 
-    var pipelineInfo = new GraphicsPipelineCreateInfo {
-      SType = StructureType.GraphicsPipelineCreateInfo,
-      StageCount = 2,
-      PStages = shaderStages,
-      PVertexInputState = &vertexInputInfo,
-      PInputAssemblyState = &inputAssembly,
-      PViewportState = &viewportState,
-      PRasterizationState = &rasterizer,
-      PMultisampleState = &multisampling,
-      PColorBlendState = &colorBlending,
-      Layout = data.PipelineLayout,
-      RenderPass = data.RenderPass,
-      Subpass = 0,
-      BasePipelineHandle = default
-    };
+      var pipeline = data.PipelineLayout;
 
-    fixed (Silk.NET.Vulkan.Pipeline* graphicsPipeline = &data.GraphicsPipeline) {
-      if (data.vk.CreateGraphicsPipelines
-              (data.Device, default, 1, &pipelineInfo, null, graphicsPipeline) != Result.Success) {
+      var pipelineInfo = new GraphicsPipelineCreateInfo {
+        SType = StructureType.GraphicsPipelineCreateInfo,
+        StageCount = 2,
+        PStages = shaderStages,
+        PVertexInputState = &vertexInputInfo,
+        PInputAssemblyState = &inputAssembly,
+        PViewportState = &viewportState,
+        PRasterizationState = &rasterizer,
+        PMultisampleState = &multisampling,
+        PDepthStencilState = &depthStencil,
+        PColorBlendState = &colorBlending,
+        PDynamicState = &dynamicState,
+        Layout = data.PipelineLayout,
+        RenderPass = data.RenderPass,
+        Subpass = 0,
+        BasePipelineHandle = default
+      };
+
+      if (data.vk.CreateGraphicsPipelines(data.Device, default, 1, &pipelineInfo, null, out data.GraphicsPipeline) != Result.Success) {
         throw new Exception("failed to create graphics pipeline!");
       }
     }

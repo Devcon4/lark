@@ -33,6 +33,9 @@ public class LarkWindow(ILogger<LarkWindow> logger, IHostApplicationLifetime hos
 
   }
 
+  // getter that returns the window time.
+  public double Time => _glfw.GetTime();
+
   private void OnClosing() {
     // Need to shutdown the host when the window closes.
     hostLifetime.StopApplication();

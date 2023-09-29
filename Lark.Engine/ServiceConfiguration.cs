@@ -1,3 +1,4 @@
+using Lark.Engine.Model;
 using Lark.Engine.Pipeline;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -38,6 +39,11 @@ public static class ServiceConfiguration {
     services.AddSingleton<CommandPoolSegment>();
     services.AddSingleton<CommandBufferSegment>();
     services.AddSingleton<SyncSegment>();
+    services.AddSingleton<MeshBufferSegment>();
+    services.AddSingleton<DepthSegment>();
+
+    services.AddSingleton<ModelUtils>();
+    services.AddSingleton<ModelBuilder>();
 
     return services;
   }
