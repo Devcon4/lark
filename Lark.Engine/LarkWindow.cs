@@ -59,17 +59,29 @@ public class LarkWindow(ILogger<LarkWindow> logger, IHostApplicationLifetime hos
     _glfw.PollEvents();
   }
 
+  private unsafe bool ShouldClose() {
+    return _glfw.WindowShouldClose(windowHandle);
+  }
+
   public unsafe void Cleanup() {
     logger.LogInformation("Disposing window...");
     _glfw.DestroyWindow(windowHandle);
     _glfw.Terminate();
   }
 
-  public unsafe void Run(Action drawFrame) {
+  public void Run(Action drawFrame) {
     logger.LogInformation("Running window...");
-    while (!_glfw.WindowShouldClose(windowHandle)) {
+    while (!ShouldClose()) {
       _glfw.PollEvents();
       drawFrame();
+    }
+  }
+
+  public async Task Run(Func<Task> drawFrame) {
+    logger.LogInformation("Running window...");
+    while (!ShouldClose()) {
+      _glfw.PollEvents();
+      await drawFrame();
     }
   }
 

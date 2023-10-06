@@ -66,7 +66,7 @@ public class UniformBufferSegment(LarkVulkanData data, LarkWindow larkWindow, Bu
     var uboData = new UniformBufferObject {
       view = Matrix4X4.Transform(Matrix4X4.CreateTranslation(camera.Transform.Translation), camera.Transform.Rotation),
       proj = Matrix4X4.CreatePerspectiveFieldOfView(Scalar.DegreesToRadians(camera.Fov), camera.AspectRatio, camera.Near, camera.Far),
-      lightPos = new Vector3D<float>(0, 10, 0),
+      lightPos = new Vector3D<float>(10, 10, 15),
       viewPos = camera.Transform.Translation
     };
 

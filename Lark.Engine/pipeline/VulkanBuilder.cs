@@ -60,7 +60,8 @@ public class VulkanBuilder(
 
     data.cameras.Add(LarkCamera.DefaultCamera());
 
-    data.models.Add(modelUtils.LoadFile("damagedHelmet/DamagedHelmet.gltf"));
+    data.models.Add(modelUtils.LoadFile("damagedHelmet/DamagedHelmet.glb"));
+    // data.models.Add(modelUtils.LoadFile("damagedHelmet/DamagedHelmet.gltf"));
     // data.models.Add(modelUtils.LoadFile("fish/BarramundiFish.gltf"));
     // data.models.Add(modelUtils.LoadFile("boxTextured/BoxTextured.glb"));
     // data.models.Add(modelUtils.LoadFile("materialsVariantsShoe/MaterialsVariantsShoe.glb"));
@@ -134,6 +135,8 @@ public class VulkanBuilder(
 
   public unsafe void DrawFrame() {
     currentF++;
+    data.CurrF = currentF;
+
     var firstModel = data.models[0];
     // Time sense last frame
     var now = DateTime.Now;

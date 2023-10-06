@@ -1,18 +1,25 @@
-﻿using Lark.Engine.Pipeline;
+﻿using Lark.Engine.ecs;
+using Lark.Engine.Pipeline;
 using Microsoft.Extensions.Logging;
-using Silk.NET.Maths;
 
 namespace Lark.Engine;
 
-public partial class Engine(LarkWindow larkWindow, VulkanBuilder vulkanBuilder, ILogger<Engine> logger) {
+public partial class Engine(LarkVulkanData data, LarkWindow larkWindow, VulkanBuilder vulkanBuilder, SystemManager systemManager, ILogger<Engine> logger) {
   public async Task Run() {
     logger.LogInformation("Running engine...");
     larkWindow.Build();
     larkWindow.SetFramebufferResize(vulkanBuilder.FramebufferResize);
+    systemManager.Init();
 
     await Init();
 
-    larkWindow.Run(vulkanBuilder.DrawFrame);
+    await larkWindow.Run(GameLoop);
+  }
+
+  public async Task GameLoop() {
+    logger.LogDebug("{frame} :: {realFrame} :: Game looping", data.CurrentFrame, data.CurrF);
+    await systemManager.Run();
+    vulkanBuilder.DrawFrame();
   }
 
   private async Task Init() {

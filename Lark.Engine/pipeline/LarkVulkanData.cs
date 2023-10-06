@@ -6,6 +6,7 @@ using Buffer = Silk.NET.Vulkan.Buffer;
 using Image = Silk.NET.Vulkan.Image;
 using Silk.NET.Maths;
 using Lark.Engine.Model;
+using System.Diagnostics;
 
 namespace Lark.Engine.Pipeline;
 
@@ -15,6 +16,8 @@ public struct DescriptorLayouts {
 }
 
 public class LarkVulkanData {
+  public Stopwatch sw = new();
+
   public readonly Vk vk = Vk.GetApi();
   public const int MaxFramesInFlight = 8;
 
@@ -98,6 +101,7 @@ public class LarkVulkanData {
 
   public string[] InstanceExtensions = { ExtDebugUtils.ExtensionName };
   public string[] DeviceExtensions = { KhrSwapchain.ExtensionName };
+  public int CurrF;
   public readonly string[][] ValidationLayerNamesPriorityList = new string[][] {
     new [] { "VK_LAYER_KHRONOS_validation" }, new [] { "VK_LAYER_LUNARG_standard_validation" }, new [] {
     "VK_LAYER_GOOGLE_threading",

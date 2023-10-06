@@ -9,6 +9,7 @@ builder.Services
   .AddLarkEngine()
   .AddVulkanPipeline()
   .AddGame()
+  .AddGameSystems()
   .AddSerilog(new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
     .CreateLogger());
