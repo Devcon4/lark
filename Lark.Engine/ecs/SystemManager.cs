@@ -59,6 +59,6 @@ public class SystemManager(LarkVulkanData data, ILogger<SystemManager> logger, E
     await block.Completion;
 
     data.sw.Stop();
-    logger.LogInformation("Frame Time :: {ms}ms", data.sw.Elapsed.TotalNanoseconds / 1000000);
+    // logger.LogInformation("Frame Time :: {ms}ms", data.sw.Elapsed.TotalNanoseconds / 1000000);
   }
 }

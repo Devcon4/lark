@@ -4,6 +4,7 @@ namespace Lark.Game.components;
 
 public struct MessageComponent : ILarkComponent {
   public string text;
+  public DateTime time;
 }
 
 public struct PositionComponent : ILarkComponent {

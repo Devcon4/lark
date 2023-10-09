@@ -9,7 +9,7 @@ public class LoggerSystem(ILogger<LoggerSystem> logger, EntityManager entityMana
     logger.LogInformation("Initializing LoggerSystem...");
 
     //Add 100 entities
-    for (int i = 0; i < 1000; i++) {
+    for (int i = 0; i < 10; i++) {
       entityManager.AddEntity(
         new MessageComponent() {
           text = "Hello World " + i
@@ -26,10 +26,8 @@ public class LoggerSystem(ILogger<LoggerSystem> logger, EntityManager entityMana
     var (key, components) = entity;
     var message = components.Get<MessageComponent>();
 
-    logger.LogDebug("Entity :: {key} says {message}", key, message.text);
-
     message = message with {
-      text = message.text + DateTime.Now
+      time = DateTime.Now
     };
 
     entityManager.UpdateEntityComponent(key, message);
