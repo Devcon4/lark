@@ -29,4 +29,30 @@ public class FramebufferSegment(LarkVulkanData data, ILogger<FramebufferSegment>
 
     logger.LogInformation("Created framebuffers.");
   }
+
+  public unsafe void CreateGuiFramebuffers() {
+    data.GuiFramebuffers = new Framebuffer[data.SwapchainImageViews.Length];
+
+    for (var i = 0; i < data.SwapchainImageViews.Length; i++) {
+      var attachments = new[] { data.SwapchainImageViews[i] };
+
+      fixed (ImageView* attachmentsPtr = attachments) {
+        var framebufferInfo = new FramebufferCreateInfo {
+          SType = StructureType.FramebufferCreateInfo,
+          RenderPass = data.GuiRenderPass,
+          AttachmentCount = (uint)attachments.Length,
+          PAttachments = attachmentsPtr,
+          Width = data.SwapchainExtent.Width,
+          Height = data.SwapchainExtent.Height,
+          Layers = 1
+        };
+
+        if (data.vk.CreateFramebuffer(data.Device, &framebufferInfo, null, out data.GuiFramebuffers[i]) != Result.Success) {
+          throw new Exception("failed to create framebuffer!");
+        }
+      }
+    }
+
+    logger.LogInformation("Created GUI framebuffers.");
+  }
 }

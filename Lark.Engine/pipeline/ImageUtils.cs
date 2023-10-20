@@ -27,6 +27,38 @@ public class ImageUtils(LarkVulkanData data, BufferUtils bufferUtils, CommandUti
     CreateImage(img, ref image, ref imageMemory);
   }
 
+  public void UpdateTexture(ReadOnlySpan<byte> span, ref Image image) {
+    var rawImage = SixLabors.ImageSharp.Image.Load<Rgba32>(span);
+    UpdateImage(rawImage, ref image);
+  }
+
+  public unsafe void UpdateImage(Image<Rgba32> rawImage, ref Image image) {
+    var imageByteSize = (ulong)(rawImage.Width * rawImage.Height * rawImage.PixelType.BitsPerPixel / 8);
+
+    // Create bufferAllocInfo
+    var bufferAllocInfo = new BufferAllocInfo {
+      Usage = BufferUsageFlags.TransferSrcBit,
+      Properties = MemoryPropertyFlags.HostVisibleBit | MemoryPropertyFlags.HostCoherentBit
+    };
+
+    Buffer stagingBuffer = default;
+    DeviceMemory stagingBufferMemory = default;
+    // Create staging buffer.
+    bufferUtils.CreateBuffer(imageByteSize, bufferAllocInfo, ref stagingBuffer, ref stagingBufferMemory);
+
+    void* imgData;
+    data.vk.MapMemory(data.Device, stagingBufferMemory, 0, imageByteSize, 0, &imgData);
+    rawImage.CopyPixelDataTo(new Span<byte>(imgData, (int)imageByteSize));
+    data.vk.UnmapMemory(data.Device, stagingBufferMemory);
+
+    TransitionImageLayout(image, Format.R8G8B8A8Unorm, ImageLayout.Undefined, ImageLayout.TransferDstOptimal);
+    CopyBufferToImage(stagingBuffer, image, (uint)rawImage.Width, (uint)rawImage.Height);
+    TransitionImageLayout(image, Format.R8G8B8A8Unorm, ImageLayout.TransferDstOptimal, ImageLayout.ShaderReadOnlyOptimal);
+
+    data.vk.DestroyBuffer(data.Device, stagingBuffer, null);
+    data.vk.FreeMemory(data.Device, stagingBufferMemory, null);
+  }
+
   private unsafe void CreateImage(Image<Rgba32> rawImage, ref Image image, ref DeviceMemory imageMemory) {
     var imageByteSize = (ulong)(rawImage.Width * rawImage.Height * rawImage.PixelType.BitsPerPixel / 8);
 

@@ -1,4 +1,5 @@
 using Lark.Engine.ecs;
+using Lark.Engine.gui;
 using Lark.Engine.Model;
 using Lark.Engine.Pipeline;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,7 +13,9 @@ public static class ServiceConfiguration {
     services.AddSingleton<ShaderBuilder>();
     services.AddSingleton<ModelBuilder>();
 
-    services.AddLarkECS();
+    services
+      .AddLarkECS()
+      .AddLarkGUI();
     return services;
   }
 
@@ -20,6 +23,13 @@ public static class ServiceConfiguration {
   public static IServiceCollection AddLarkECS(this IServiceCollection services) {
     services.AddSingleton<EntityManager>();
     services.AddSingleton<SystemManager>();
+
+    return services;
+  }
+
+  public static IServiceCollection AddLarkGUI(this IServiceCollection services) {
+    services.AddSingleton<GuiManager>();
+    services.AddSingleton<GUIData>();
 
     return services;
   }

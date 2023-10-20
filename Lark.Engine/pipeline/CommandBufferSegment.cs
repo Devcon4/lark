@@ -1,3 +1,4 @@
+using Lark.Engine.gui;
 using Lark.Engine.Model;
 using Microsoft.Extensions.Logging;
 using Silk.NET.Maths;
@@ -6,7 +7,7 @@ using Buffer = Silk.NET.Vulkan.Buffer;
 
 namespace Lark.Engine.Pipeline;
 
-public class CommandBufferSegment(LarkVulkanData data, ModelUtils modelUtils, ILogger<CommandBufferSegment> logger) {
+public class CommandBufferSegment(LarkVulkanData data, GUIData guiData, ModelUtils modelUtils, ILogger<CommandBufferSegment> logger) {
   public unsafe void CreateCommandBuffers() {
     data.CommandBuffers = new CommandBuffer[data.SwapchainFramebuffers.Length];
 
@@ -72,6 +73,16 @@ public class CommandBufferSegment(LarkVulkanData data, ModelUtils modelUtils, IL
       foreach (var model in data.models) {
         modelUtils.Draw(model, i);
       }
+
+      data.vk.CmdEndRenderPass(data.CommandBuffers[i]);
+
+      renderPassInfo.RenderPass = data.GuiRenderPass;
+      renderPassInfo.Framebuffer = data.GuiFramebuffers[i];
+
+      data.vk.CmdBeginRenderPass(data.CommandBuffers[i], &renderPassInfo, SubpassContents.Inline);
+
+      data.vk.CmdBindPipeline(data.CommandBuffers[i], PipelineBindPoint.Graphics, data.GuiPipeline);
+      data.vk.CmdDraw(data.CommandBuffers[i], 4, 1, 0, 0);
 
       data.vk.CmdEndRenderPass(data.CommandBuffers[i]);
 

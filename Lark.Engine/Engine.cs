@@ -1,19 +1,33 @@
 ﻿using Lark.Engine.ecs;
+using Lark.Engine.gui;
 using Lark.Engine.Pipeline;
 using Microsoft.Extensions.Logging;
+using Silk.NET.Maths;
 
 namespace Lark.Engine;
 
-public partial class Engine(LarkVulkanData data, LarkWindow larkWindow, VulkanBuilder vulkanBuilder, SystemManager systemManager, ILogger<Engine> logger) {
+public partial class Engine(
+  LarkVulkanData data,
+  LarkWindow larkWindow,
+  VulkanBuilder vulkanBuilder,
+  SystemManager systemManager,
+  GuiManager guiManager,
+  ILogger<Engine> logger) {
   public async Task Run() {
     logger.LogInformation("Running engine...");
     larkWindow.Build();
-    larkWindow.SetFramebufferResize(vulkanBuilder.FramebufferResize);
-    systemManager.Init();
+    larkWindow.SetFramebufferResize(resize);
 
-    await Init();
+    systemManager.Init();
+    await guiManager.Init();
+    vulkanBuilder.InitVulkan();
 
     await larkWindow.Run(GameLoop);
+  }
+
+  private void resize(Vector2D<int> size) {
+    vulkanBuilder.FramebufferResize(size);
+    guiManager.Resize(size);
   }
 
   public async Task GameLoop() {
@@ -22,15 +36,10 @@ public partial class Engine(LarkVulkanData data, LarkWindow larkWindow, VulkanBu
     vulkanBuilder.DrawFrame();
   }
 
-  private async Task Init() {
-    logger.LogInformation("Initializing engine...");
-    vulkanBuilder.InitVulkan();
-    await Task.CompletedTask;
-  }
-
   public async Task Cleanup() {
     logger.LogInformation("Disposing engine...");
     _ = Task.Run(() => {
+      guiManager.Cleanup();
       vulkanBuilder.Cleanup();
       larkWindow.Cleanup();
     });

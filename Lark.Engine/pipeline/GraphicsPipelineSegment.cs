@@ -195,4 +195,29 @@ public class GraphicsPipelineSegment(LarkVulkanData data, ShaderBuilder shaderBu
 
     return shaderModule;
   }
+
+  // Create the gui pipeline.
+  public unsafe void CreateGuiPipeline() {
+    var vertShaderInfo = shaderBuilder.LoadShader("mesh.vert");
+    var fragShaderInfo = shaderBuilder.LoadShader("mesh.frag");
+
+    var vertShaderModule = CreateShaderModule(vertShaderInfo);
+    var fragShaderModule = CreateShaderModule(fragShaderInfo);
+
+    var vertShaderStageInfo = new PipelineShaderStageCreateInfo {
+      SType = StructureType.PipelineShaderStageCreateInfo,
+      Stage = ShaderStageFlags.VertexBit,
+      Module = vertShaderModule,
+      PName = (byte*)SilkMarshal.StringToPtr("main")
+    };
+
+    var fragShaderStageInfo = new PipelineShaderStageCreateInfo {
+      SType = StructureType.PipelineShaderStageCreateInfo,
+      Stage = ShaderStageFlags.FragmentBit,
+      Module = fragShaderModule,
+      PName = (byte*)SilkMarshal.StringToPtr("main")
+    };
+
+    var shaderStages = stackalloc[] { vertShaderStageInfo, fragShaderStageInfo };
+  }
 }

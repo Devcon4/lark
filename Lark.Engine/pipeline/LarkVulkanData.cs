@@ -41,12 +41,15 @@ public class LarkVulkanData {
   public Extent2D SwapchainExtent;
   public ImageView[] SwapchainImageViews = null!;
   public Framebuffer[] SwapchainFramebuffers = null!;
+  public Framebuffer[] GuiFramebuffers = null!;
 
   public RenderPass RenderPass;
+  public RenderPass GuiRenderPass;
   public DescriptorLayouts Layouts;
 
   public PipelineLayout PipelineLayout;
   public Silk.NET.Vulkan.Pipeline GraphicsPipeline;
+  public Silk.NET.Vulkan.Pipeline GuiPipeline;
 
   // public Buffer VertexBuffer;
   // public DeviceMemory VertexBufferMemory;
