@@ -1,8 +1,15 @@
+using System.Collections.Concurrent;
+using System.Collections.Frozen;
+using System.Collections.Immutable;
+using System.Collections.ObjectModel;
+using Microsoft.Extensions.Logging;
+
 namespace Lark.Engine.ecs;
 
-public class EntityManager {
+public class EntityManager(ILogger<EntityManager> logger) {
 
-  private Dictionary<Guid, HashSet<ILarkComponent>> entities = new();
+  private Dictionary<Guid, FrozenSet<ILarkComponent>> entities = new();
+  private Dictionary<Guid, FrozenSet<Type>> entityComponents = new();
 
   private Dictionary<Type, HashSet<Guid>> entitiesByComponentType = new();
 
@@ -13,22 +20,25 @@ public class EntityManager {
 
   public Guid AddEntity(Guid key, params ILarkComponent[] components) {
 
+    logger.LogDebug("Adding entity {key}", key);
+
     if (entities.ContainsKey(key)) {
       throw new Exception($"Entity {key} already exists");
     }
 
-    var componentTypes = components.Select(c => c.GetType()).ToHashSet();
+    var componentTypes = components.Select(c => c.GetType()).ToFrozenSet();
     if (componentTypes.Count != components.Length) {
       throw new Exception($"Components must be unique on entity: {key}");
     }
 
-    entities.Add(key, components.ToHashSet());
+    entities.TryAdd(key, components.ToFrozenSet());
+    entityComponents.TryAdd(key, componentTypes);
     foreach (var component in components) {
       var componentType = component.GetType();
 
       if (!entitiesByComponentType.TryGetValue(componentType, out HashSet<Guid>? value)) {
         value = new HashSet<Guid>();
-        entitiesByComponentType.Add(componentType, value);
+        entitiesByComponentType.TryAdd(componentType, value);
       }
 
       value.Add(key);
@@ -42,28 +52,35 @@ public class EntityManager {
     return entities.Count;
   }
 
-  public ValueTuple<Guid, HashSet<ILarkComponent>> GetEntity(Guid key) {
-    return new ValueTuple<Guid, HashSet<ILarkComponent>>(key, entities[key]);
+  public ValueTuple<Guid, FrozenSet<ILarkComponent>> GetEntity(Guid key) {
+    return new ValueTuple<Guid, FrozenSet<ILarkComponent>>(key, entities[key].ToFrozenSet());
   }
 
-  public HashSet<ValueTuple<Guid, HashSet<ILarkComponent>>> GetEntitiesWithComponents(params Type[] componentTypes) {
-    var entitiesWithComponents = new List<ValueTuple<Guid, HashSet<ILarkComponent>>>();
-    var componentTypeSet = new HashSet<Type>(componentTypes);
+  // public FrozenSet<ValueTuple<Guid, FrozenSet<ILarkComponent>>> GetEntitiesWithComponents(params Type[] componentTypes) {
+  //   var entitiesWithComponents = new HashSet<ValueTuple<Guid, FrozenSet<ILarkComponent>>>();
+  //   var componentTypeSet = new HashSet<Type>(componentTypes);
 
-    foreach (var entity in entities) {
-      var entityComponents = entity.Value;
-      var entityComponentTypes = new HashSet<Type>(entityComponents.Select(c => c.GetType()));
+  //   foreach (var entity in entities) {
+  //     var components = entity.Value.ToFrozenSet();
+  //     if (entityComponents[entity.Key].IsSupersetOf(componentTypeSet)) {
+  //       entitiesWithComponents.Add(new(entity.Key, components));
+  //     }
+  //   }
 
-      if (entityComponentTypes.IsSupersetOf(componentTypeSet)) {
-        entitiesWithComponents.Add(new(entity.Key, entityComponents));
+  //   return entitiesWithComponents.ToFrozenSet();
+  // }
+
+  public async IAsyncEnumerable<ValueTuple<Guid, FrozenSet<ILarkComponent>>> GetEntitiesWithComponents(params Type[] componentTypes) {
+    foreach (var (key, components) in entities) {
+      if (entityComponents[key].IsSupersetOf(componentTypes)) {
+        yield return new(key, components);
       }
     }
-
-    return entitiesWithComponents.ToHashSet();
+    await Task.CompletedTask;
   }
 
   public void RemoveEntity(Guid key) {
-    if (!entities.TryGetValue(key, out HashSet<ILarkComponent>? value)) {
+    if (!entities.TryGetValue(key, out var value)) {
       throw new Exception("Entity does not exist");
     }
 
@@ -71,20 +88,46 @@ public class EntityManager {
       var componentType = component.GetType();
       entitiesByComponentType[componentType].Remove(key);
     }
-
+    entityComponents.Remove(key);
     entities.Remove(key);
   }
 
-  public void UpdateEntityComponent(Guid key, ILarkComponent component) {
-    if (!entities.TryGetValue(key, out HashSet<ILarkComponent>? value)) {
+  public void UpdateEntityComponent<TComp>(Guid key, TComp component) where TComp : ILarkComponent {
+    if (!entities.TryGetValue(key, out var value)) {
       throw new Exception("Entity does not exist");
     }
 
-    var componentType = component.GetType();
+    var componentType = typeof(TComp);
     entitiesByComponentType[componentType].Remove(key);
     entitiesByComponentType[componentType].Add(key);
 
-    value.RemoveWhere(c => c.GetType() == componentType);
-    value.Add(component);
+    var newSet = value.Where(c => c.GetType() != componentType).ToHashSet();
+    newSet.Add(component);
+    entities[key] = newSet.ToFrozenSet();
+  }
+
+  public void RemoveEntityComponent<TComp>(Guid key) where TComp : ILarkComponent {
+    if (!entities.TryGetValue(key, out var value)) {
+      throw new Exception("Entity does not exist");
+    }
+
+    var componentType = typeof(TComp);
+    entitiesByComponentType[componentType].Remove(key);
+
+    var newSet = value.Where(c => c.GetType() != componentType).ToHashSet();
+    entities[key] = newSet.ToFrozenSet();
+  }
+
+  public void AddEntityComponent<TComp>(Guid key, TComp component) where TComp : ILarkComponent {
+    if (!entities.TryGetValue(key, out var value)) {
+      throw new Exception("Entity does not exist");
+    }
+
+    var componentType = typeof(TComp);
+    entitiesByComponentType[componentType].Add(key);
+
+    var newSet = value.ToHashSet();
+    newSet.Add(component);
+    entities[key] = newSet.ToFrozenSet();
   }
 }

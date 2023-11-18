@@ -1,3 +1,5 @@
+using System.Collections.Frozen;
+using System.Collections.Immutable;
 using System.Threading.Channels;
 using System.Threading.Tasks.Dataflow;
 using Lark.Engine.Pipeline;
@@ -5,10 +7,19 @@ using Microsoft.Extensions.Logging;
 
 namespace Lark.Engine.ecs;
 
-public class SystemManager(LarkVulkanData data, ILogger<SystemManager> logger, EntityManager entityManager, IEnumerable<ILarkSystem> systems) {
+public class SystemManager(
+  LarkVulkanData data,
+  ILogger<SystemManager> logger,
+  EntityManager entityManager,
+  IEnumerable<ILarkSystem> systems,
+  IEnumerable<ILarkSyncSystem> syncSystems) {
   public async void Init() {
     data.sw.Start();
     foreach (var system in systems) {
+      await system.Init();
+    }
+
+    foreach (var system in syncSystems) {
       await system.Init();
     }
   }
@@ -20,45 +31,60 @@ public class SystemManager(LarkVulkanData data, ILogger<SystemManager> logger, E
   };
 
   public async Task Run() {
-    data.sw.Restart();
 
     // Extra 24 buffer.
     var totalEntities = entityManager.GetEntitiesCount() + 24;
 
-    var block = new ActionBlock<ValueTuple<Action<ValueTuple<Guid, HashSet<ILarkComponent>>>, Guid, HashSet<ILarkComponent>>>(job => {
-      var (action, key, components) = job;
-      action((key, components));
-    }, new ExecutionDataflowBlockOptions() {
-      EnsureOrdered = false,
-      BoundedCapacity = totalEntities,
-    });
+    // var block = new ActionBlock<ValueTuple<Action<ValueTuple<Guid, FrozenSet<ILarkComponent>>>, Guid, FrozenSet<ILarkComponent>>>(job => {
+    //   var (action, key, components) = job;
+    //   action((key, components));
+    // }, new ExecutionDataflowBlockOptions() {
+    //   EnsureOrdered = false,
+    //   BoundedCapacity = totalEntities
+    // });
 
     options.Capacity = totalEntities;
 
-    var channel = Channel.CreateBounded<ValueTuple<Action<ValueTuple<Guid, HashSet<ILarkComponent>>>, Guid, HashSet<ILarkComponent>>>(options);
+    var channel = Channel.CreateBounded<ValueTuple<Action<ValueTuple<Guid, FrozenSet<ILarkComponent>>>, Guid, FrozenSet<ILarkComponent>>>(options);
 
     var readTask = Task.Run(async () => {
       var reader = channel.Reader;
       await foreach (var job in reader.ReadAllAsync()) {
-        block.Post(job);
+        // job.Item1((job.Item2, job.Item3));
+        // block.Post(job);
+        job.Item1((job.Item2, job.Item3));
       }
     });
 
     var writer = channel.Writer;
     foreach (var system in systems) {
       var entities = entityManager.GetEntitiesWithComponents(system.RequiredComponents);
-      foreach (var (key, components) in entities) {
+
+      await foreach (var (key, components) in entities) {
         await writer.WriteAsync((system.Update, key, components));
       }
+
+      // await Parallel.ForEachAsync(entities, async (entity, ct) => {
+      //   var (key, components) = entity;
+      //   await writer.WriteAsync((system.Update, key, components), ct);
+      // });
+
+      // foreach (var (key, components) in entities) {
+      //   await writer.WriteAsync((system.Update, key, components));
+      // }
     }
 
     writer.Complete();
-    block.Complete();
+    // block.Complete();
 
     await readTask;
-    await block.Completion;
+    // await block.Completion;
 
-    data.sw.Stop();
-    // logger.LogInformation("Frame Time :: {ms}ms", data.sw.Elapsed.TotalNanoseconds / 1000000);
+    // foreach (var system in syncSystems) {
+    //   var entities = entityManager.GetEntitiesWithComponents(system.RequiredComponents);
+    //   foreach (var (key, components) in entities) {
+    //     system.Update((key, components));
+    //   }
+    // }
   }
 }

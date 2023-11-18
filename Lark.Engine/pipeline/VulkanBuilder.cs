@@ -1,4 +1,5 @@
 using Lark.Engine.Model;
+using Lark.Engine.std;
 using Microsoft.Extensions.Logging;
 using Silk.NET.Maths;
 using Silk.NET.Vulkan;
@@ -28,7 +29,8 @@ public class VulkanBuilder(
     SyncSegment syncSegment,
     MeshBufferSegment meshBufferSegment,
     DepthSegment depthSegment,
-    ModelUtils modelUtils
+    ModelUtils modelUtils,
+    TimeManager timeManager
     ) {
 
   public void InitVulkan() {
@@ -60,7 +62,7 @@ public class VulkanBuilder(
 
     data.cameras.Add(LarkCamera.DefaultCamera());
 
-    data.models.Add(modelUtils.LoadFile("damagedHelmet/DamagedHelmet.glb"));
+    // data.models.Add(modelUtils.LoadFile("damagedHelmet/DamagedHelmet.glb"));
     // data.models.Add(modelUtils.LoadFile("damagedHelmet/DamagedHelmet.gltf"));
     // data.models.Add(modelUtils.LoadFile("fish/BarramundiFish.gltf"));
     // data.models.Add(modelUtils.LoadFile("boxTextured/BoxTextured.glb"));
@@ -71,18 +73,13 @@ public class VulkanBuilder(
     // data.models.Add(modelUtils.LoadFile("metalRoughSpheres/MetalRoughSpheres.glb"));
     // data.models.Add(modelUtils.LoadFile("stainedGlassLamp/gLTF/StainedGlassLamp.gltf"));
 
-    var firstModel = data.models[0];
-    firstModel.Transform.Translation = new Vector3D<float>(0, 0, 0);
-    firstModel.Transform.Scale = new Vector3D<float>(2, 2, 2);
-    data.models[0] = firstModel;
-
     commandBufferSegment.CreateCommandBuffers();
   }
 
   public unsafe void Cleanup() {
     logger.LogInformation("Disposing Vulkan...");
 
-    foreach (var model in data.models) {
+    foreach (var (_, model) in data.models) {
       model.Dispose(data);
     }
 
@@ -130,20 +127,10 @@ public class VulkanBuilder(
 
   // currentFrame
 
-  public int currentF = 0;
-  public DateTime lastFrame = DateTime.Now;
-
   public unsafe void DrawFrame() {
-    currentF++;
-    data.CurrF = currentF;
+    timeManager.Update();
 
-    var firstModel = data.models[0];
-    // Time sense last frame
-    var now = DateTime.Now;
-    var deltaTime = now - lastFrame;
-    lastFrame = now;
     var d = data;
-    var fps = 1 / deltaTime.TotalSeconds;
 
     var camera = data.cameras[0];
 
@@ -165,7 +152,6 @@ public class VulkanBuilder(
     // firstModel.Transform.Translation = new Vector3D<float>(0, 0, 0);
     // firstModel.Transform.Scale = new Vector3D<float>(1, 1, 1);
 
-    data.models[0] = firstModel;
     data.cameras[0] = camera;
     // log ubo.
 
@@ -183,12 +169,14 @@ public class VulkanBuilder(
       throw new Exception("failed to acquire swap chain image!");
     }
 
-    // commandBufferSegment.UpdateCommandBuffers(data.CurrentFrame);
-    uniformBufferSegment.UpdateUniformBuffer(data.cameras.FirstOrDefault(), data.CurrentFrame);
-
     if (data.ImagesInFlight[imageIndex].Handle != default) {
       data.vk.WaitForFences(data.Device, 1, data.ImagesInFlight[imageIndex], true, ulong.MaxValue);
     }
+
+    uniformBufferSegment.UpdateUniformBuffer(data.cameras.FirstOrDefault(), data.CurrentFrame);
+
+    commandBufferSegment.ResetCommandBuffer(data.CommandBuffers[imageIndex]);
+    commandBufferSegment.RecordCommandBuffer(data.CommandBuffers[imageIndex], imageIndex);
 
     data.ImagesInFlight[imageIndex] = data.InFlightFences[data.CurrentFrame];
 

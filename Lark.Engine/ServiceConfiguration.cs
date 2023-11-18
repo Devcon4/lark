@@ -1,6 +1,7 @@
 using Lark.Engine.ecs;
 using Lark.Engine.Model;
 using Lark.Engine.Pipeline;
+using Lark.Engine.std;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Lark.Engine;
@@ -12,7 +13,14 @@ public static class ServiceConfiguration {
     services.AddSingleton<ShaderBuilder>();
     services.AddSingleton<ModelBuilder>();
 
-    services.AddLarkECS();
+    services.AddLarkECS().AddLarkSTD();
+    return services;
+  }
+
+  public static IServiceCollection AddLarkSTD(this IServiceCollection services) {
+    services.AddSingleton<ILarkSystem, RenderSystem>();
+    services.AddSingleton<TimeManager>();
+
     return services;
   }
 

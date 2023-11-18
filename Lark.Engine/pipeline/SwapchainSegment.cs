@@ -49,7 +49,7 @@ public class SwapchainSegment(LarkVulkanData data,
     // descriptorSetSegment.CreateDescriptorPool();
     // descriptorSetSegment.CreateDescriptorSets();
 
-    foreach (var model in data.models) {
+    foreach (var (_, model) in data.models) {
       modelUtils.CreateDescriptorPool(model);
       modelUtils.CreateDescriptorSets(model);
     }

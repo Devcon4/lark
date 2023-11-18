@@ -13,6 +13,7 @@ public class CommandPoolSegment(LarkVulkanData data, QueueFamilyUtil queueFamily
 
     var poolInfo = new CommandPoolCreateInfo {
       SType = StructureType.CommandPoolCreateInfo,
+      Flags = CommandPoolCreateFlags.ResetCommandBufferBit,
       QueueFamilyIndex = queueFamilyIndices.GraphicsFamily.Value,
     };
 

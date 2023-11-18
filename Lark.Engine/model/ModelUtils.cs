@@ -15,7 +15,7 @@ public class ModelUtils(LarkVulkanData data, ImageUtils imageUtils, BufferUtils 
 
 
   public LarkModel LoadFile(string modelName) {
-    logger.LogInformation("{modelName}:: Begin loading...", modelName);
+    logger.LogDebug("{modelName}:: Begin loading...", modelName);
     var fullPath = Path.Join(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), $"./resources/models/{modelName}");
 
     if (!File.Exists(fullPath)) {
@@ -32,22 +32,22 @@ public class ModelUtils(LarkVulkanData data, ImageUtils imageUtils, BufferUtils 
     }
 
     larkModel.Nodes = Nodes.ToArray().AsMemory();
-    logger.LogInformation("{modelName}:: Loaded nodes {nodeCount}", modelName, Nodes.Count);
+    logger.LogDebug("{modelName}:: Loaded nodes {nodeCount}", modelName, Nodes.Count);
     larkModel.Images = LoadImages(model);
-    logger.LogInformation("{modelName}:: Loaded images {imageCount}", modelName, larkModel.Images.Length);
+    logger.LogDebug("{modelName}:: Loaded images {imageCount}", modelName, larkModel.Images.Length);
     larkModel.Textures = LoadTextures(model);
-    logger.LogInformation("{modelName}:: Loaded textures {textureCount}", modelName, larkModel.Textures.Length);
+    logger.LogDebug("{modelName}:: Loaded textures {textureCount}", modelName, larkModel.Textures.Length);
     larkModel.Materials = LoadMaterials(model);
-    logger.LogInformation("{modelName}:: Loaded materials {materialCount}", modelName, larkModel.Materials.Length);
+    logger.LogDebug("{modelName}:: Loaded materials {materialCount}", modelName, larkModel.Materials.Length);
 
     CreateDescriptorPool(larkModel);
-    logger.LogInformation("{modelName}:: Created descriptor pool.", modelName);
+    logger.LogDebug("{modelName}:: Created descriptor pool.", modelName);
     CreateDescriptorSets(larkModel);
-    logger.LogInformation("{modelName}:: Created descriptor sets.", modelName);
+    logger.LogDebug("{modelName}:: Created descriptor sets.", modelName);
     CreateMeshBuffers(larkModel);
-    logger.LogInformation("{modelName}:: Created mesh buffers.", modelName);
+    logger.LogDebug("{modelName}:: Created mesh buffers.", modelName);
 
-    logger.LogInformation("{modelName}:: Complete!", modelName);
+    logger.LogDebug("{modelName}:: Complete!", modelName);
     return larkModel;
   }
 
@@ -194,7 +194,7 @@ public class ModelUtils(LarkVulkanData data, ImageUtils imageUtils, BufferUtils 
 
   }
 
-  private unsafe void DrawNode(LarkNode node, LarkTransform parentTransform, LarkModel model, int index) {
+  private unsafe void DrawNode(LarkNode node, LarkTransform parentTransform, LarkModel model, uint index) {
 
     var absoluteTransform = node.Transform * parentTransform;
 
@@ -233,13 +233,11 @@ public class ModelUtils(LarkVulkanData data, ImageUtils imageUtils, BufferUtils 
         null
       );
 
-      // TODO: This IndexCount and FirstIndex must be wrong.
-      // That would explain why indexes only get messed up after a few rounds of primitives.
       data.vk.CmdDrawIndexed(data.CommandBuffers[index], (uint)primitive.IndexCount, 1, (uint)primitive.FirstIndex, 0, 0);
     }
   }
 
-  public unsafe void Draw(LarkModel model, int index) {
+  public unsafe void Draw(LarkTransform transform, LarkModel model, uint index) {
     var offsets = new ulong[] { 0 };
 
     // Bind the descriptor set for the matrix.
@@ -259,7 +257,7 @@ public class ModelUtils(LarkVulkanData data, ImageUtils imageUtils, BufferUtils 
       data.vk.CmdBindIndexBuffer(data.CommandBuffers[index], model.Indices.Buffer, 0, IndexType.Uint16);
 
       for (var i = 0; i < model.Nodes.Length; i++) {
-        DrawNode(model.Nodes.Span[i], model.Transform, model, index);
+        DrawNode(model.Nodes.Span[i], model.Transform * transform, model, index);
       }
     }
 

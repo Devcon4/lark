@@ -7,6 +7,7 @@ using Image = Silk.NET.Vulkan.Image;
 using Silk.NET.Maths;
 using Lark.Engine.Model;
 using System.Diagnostics;
+using System.Collections.Concurrent;
 
 namespace Lark.Engine.Pipeline;
 
@@ -21,7 +22,8 @@ public class LarkVulkanData {
   public readonly Vk vk = Vk.GetApi();
   public const int MaxFramesInFlight = 8;
 
-  public List<LarkModel> models = new();
+  public Dictionary<Guid, LarkInstance> instances = new();
+  public Dictionary<Guid, LarkModel> models = new();
   public List<LarkCamera> cameras = new();
 
   public bool EnableValidationLayers = true;

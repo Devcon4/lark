@@ -108,10 +108,10 @@ public struct LarkTransform {
     Scale = transform.Scale.ToGeneric();
   }
 
-  // Add a multiply operator for LarkTransforms. It multiplys the translation, rotation, and scale of the two transforms.
+  // Add a multiply operator for LarkTransforms. It multiplys, rotation, and scale but adds the translation of the two transforms.
   public static LarkTransform operator *(LarkTransform a, LarkTransform b) {
     return new() {
-      Translation = a.Translation * b.Translation,
+      Translation = a.Translation + b.Translation,
       Rotation = a.Rotation * b.Rotation,
       Scale = a.Scale * b.Scale
     };
@@ -123,13 +123,20 @@ public struct LarkTransform {
   }
 }
 
+public record struct LarkInstance() {
+  public Guid InstanceId = Guid.NewGuid();
+  public LarkTransform Transform;
+  public Guid ModelId;
+}
+
 public struct LarkNode {
   public unsafe LarkNode[] Children;
   public LarkPrimitive[] Primitives;
   public LarkTransform Transform;
 }
 
-public class LarkModel() {
+public class LarkModel {
+  public Guid ModelId = Guid.NewGuid();
   public LarkTransform Transform = new();
   public LarkBuffer Vertices;
   public LarkBuffer Indices;
