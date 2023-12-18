@@ -15,7 +15,15 @@ public interface ILarkChannelOwner {
   public ChannelReader<ValueTuple<Guid, FrozenSet<ILarkComponent>>> GetJobReader();
 }
 
-public interface ILarkSystem {
+public interface ILarkSystemBeforeUpdate {
+  public abstract void BeforeUpdate();
+}
+
+public interface ILarkSystemAfterUpdate {
+  public abstract void AfterUpdate();
+}
+
+public interface ILarkSystem : ILarkSystemBeforeUpdate, ILarkSystemAfterUpdate {
   public abstract Type[] RequiredComponents { get; }
   public abstract void Update(ValueTuple<Guid, FrozenSet<ILarkComponent>> Entity);
   public abstract Task Init();
@@ -36,8 +44,19 @@ public abstract class LarkSystem : ILarkSystem, ILarkSyncSystem {
   // Enqueue job
   // public void EnqueueJob(ValueTuple<Guid, HashSet<ILarkComponent>> job) => _jobQueue.Enqueue(job);
 
+  // Called for each entity with RequiredComponents every frame
   public abstract void Update(ValueTuple<Guid, FrozenSet<ILarkComponent>> Entity);
+
+  // Called once at application start
   public abstract Task Init();
+
+  // Optional overrides
+
+  // Called once per frame after all entities have been updated
+  public virtual void AfterUpdate() { }
+
+  // Called once per frame before any entities have been updated
+  public virtual void BeforeUpdate() { }
 }
 
 

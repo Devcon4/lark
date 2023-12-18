@@ -15,7 +15,7 @@ public static class ServiceConfiguration {
     services.AddSingleton<ILarkSystem, LoggerSystem>();
     services.AddSingleton<ILarkSystem, PhysicsSystem>();
     services.AddSingleton<ILarkSystem, GravitySystem>();
-    services.AddSingleton<ILarkSystem, GravitySystem>();
+    services.AddSingleton<ILarkSystem, InitSystem>();
     return services;
   }
 }

@@ -60,7 +60,7 @@ public class VulkanBuilder(
     // descriptorSetSegment.CreateDescriptorSets();
     syncSegment.CreateSyncObjects();
 
-    data.cameras.Add(LarkCamera.DefaultCamera());
+    // data.cameras.Add(LarkCamera.DefaultCamera());
 
     // data.models.Add(modelUtils.LoadFile("damagedHelmet/DamagedHelmet.glb"));
     // data.models.Add(modelUtils.LoadFile("damagedHelmet/DamagedHelmet.gltf"));
@@ -132,27 +132,27 @@ public class VulkanBuilder(
 
     var d = data;
 
-    var camera = data.cameras[0];
+    var renderingCamera = d.cameras.Values.FirstOrDefault(c => c.Active, LarkCamera.DefaultCamera());
 
-    camera.SetPosition(new Vector3D<float>(5, 0, 0));
-    camera.SetRotation(new Vector3D<float>(0, -1, 0), 270);
-    camera.SetFov(45f);
-    // camera.Transform.RotateByAxisAndAngle(new Vector3D<float>(0, 1, 0), (float)deltaTime.TotalSeconds * .9f);
-    camera.SetAspectRatio((float)data.SwapchainExtent.Width / data.SwapchainExtent.Height);
+    // camera.SetPosition(new Vector3D<float>(5, 0, 0));
+    // camera.SetRotation(new Vector3D<float>(0, -1, 0), 270);
+    // camera.SetFov(45f);
+    // // camera.Transform.RotateByAxisAndAngle(new Vector3D<float>(0, 1, 0), (float)deltaTime.TotalSeconds * .9f);
+    // camera.SetAspectRatio((float)data.SwapchainExtent.Width / data.SwapchainExtent.Height);
     // vector from quaternion
 
-    var theta = Math.Acos(camera.Transform.Rotation.W) * 2;
-    var ax = camera.Transform.Rotation.X / Math.Sin(theta / 2);
-    var ay = camera.Transform.Rotation.Y / Math.Sin(theta / 2);
-    var az = camera.Transform.Rotation.Z / Math.Sin(theta / 2);
-    // split angle and axis
-    var angle = theta * 180 / Math.PI;
-    var axis = new Vector3D<float>((float)ax, (float)ay, (float)az);
+    // var theta = Math.Acos(camera.Transform.Rotation.W) * 2;
+    // var ax = camera.Transform.Rotation.X / Math.Sin(theta / 2);
+    // var ay = camera.Transform.Rotation.Y / Math.Sin(theta / 2);
+    // var az = camera.Transform.Rotation.Z / Math.Sin(theta / 2);
+    // // split angle and axis
+    // var angle = theta * 180 / Math.PI;
+    // var axis = new Vector3D<float>((float)ax, (float)ay, (float)az);
 
     // firstModel.Transform.Translation = new Vector3D<float>(0, 0, 0);
     // firstModel.Transform.Scale = new Vector3D<float>(1, 1, 1);
 
-    data.cameras[0] = camera;
+    // data.cameras[0] = camera;
     // log ubo.
 
     // logger.LogInformation("{currentF} \t:: Δ {deltaTime}ms \t:: {fps}", currentF, deltaTime.TotalMilliseconds, fps);
@@ -173,7 +173,7 @@ public class VulkanBuilder(
       data.vk.WaitForFences(data.Device, 1, data.ImagesInFlight[imageIndex], true, ulong.MaxValue);
     }
 
-    uniformBufferSegment.UpdateUniformBuffer(data.cameras.FirstOrDefault(), data.CurrentFrame);
+    uniformBufferSegment.UpdateUniformBuffer(renderingCamera, data.CurrentFrame);
 
     commandBufferSegment.ResetCommandBuffer(data.CommandBuffers[imageIndex]);
     commandBufferSegment.RecordCommandBuffer(data.CommandBuffers[imageIndex], imageIndex);

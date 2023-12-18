@@ -1,5 +1,6 @@
 using System.Numerics;
 using Lark.Engine.Pipeline;
+using Lark.Engine.std;
 using SharpGLTF.Transforms;
 using Silk.NET.Maths;
 using Silk.NET.Vulkan;
@@ -36,18 +37,20 @@ public struct LarkTexture {
 
 // LarkCamera
 public struct LarkCamera {
+  public bool Active;
   public LarkTransform Transform;
   public float Fov;
   public float Near;
   public float Far;
   public float AspectRatio;
 
-  public LarkCamera(LarkTransform transform, float fov, float near, float far, float aspectRatio) {
+  public LarkCamera(LarkTransform transform, float fov, float near, float far, float aspectRatio, bool active = false) {
     Transform = transform;
     Fov = fov;
     Near = near;
     Far = far;
     AspectRatio = aspectRatio;
+    Active = active;
   }
 
   public static LarkCamera DefaultCamera() => new LarkCamera(
@@ -104,6 +107,12 @@ public struct LarkTransform {
     }
 
     Translation = transform.Translation.ToGeneric();
+    Rotation = transform.Rotation.ToGeneric();
+    Scale = transform.Scale.ToGeneric();
+  }
+
+  public LarkTransform(TransformComponent transform) {
+    Translation = transform.Position.ToGeneric();
     Rotation = transform.Rotation.ToGeneric();
     Scale = transform.Scale.ToGeneric();
   }

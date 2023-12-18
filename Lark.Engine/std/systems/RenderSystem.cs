@@ -16,13 +16,6 @@ public class RenderSystem(ILogger<RenderSystem> logger, EntityManager em, TimeMa
   public override Type[] RequiredComponents => new Type[] { typeof(MeshComponent), typeof(MetadataComponent), typeof(TransformComponent) };
 
   public override Task Init() {
-    SKCanvas canvas = new SKCanvas(new SKBitmap(1920, 1080));
-    canvas.Clear(SKColors.Black);
-    // draw a crosshair in the center of the screen
-    canvas.DrawLine(960, 540 - 10, 960, 540 + 10, new SKPaint { Color = SKColors.White, StrokeWidth = 2 });
-    canvas.DrawLine(960 - 10, 540, 960 + 10, 540, new SKPaint { Color = SKColors.White, StrokeWidth = 2 });
-    canvas.Flush();
-    canvas.Save();
 
     return Task.CompletedTask;
   }

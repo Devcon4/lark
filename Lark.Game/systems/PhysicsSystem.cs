@@ -10,35 +10,34 @@ public class PhysicsSystem(EntityManager em, TimeManager tm) : LarkSystem {
   public override Type[] RequiredComponents => new Type[] { typeof(TransformComponent), typeof(ForceComponent) };
 
   public override Task Init() {
-    var start = new TransformComponent(new(10, 0, 0), Vector3.One, Quaternion.Identity);
-    var initForce = new ForceComponent(new(0.01f, 0, 0));
+    // var start = new TransformComponent(new(10, 0, 0), Vector3.One, Quaternion.Identity);
+    // var initForce = new ForceComponent(new(0.01f, 0, 0));
 
-    em.AddEntity(new MeshComponent("antiqueCamera/AntiqueCamera.gltf"), new MetadataComponent("Camera-1"), initForce, start with { Position = new(15, 1, -1) });
-    em.AddEntity(new MeshComponent("antiqueCamera/AntiqueCamera.gltf"), new MetadataComponent("Camera-1"), initForce, start with { Position = new(15, 1, 0) });
-    em.AddEntity(new MeshComponent("antiqueCamera/AntiqueCamera.gltf"), new MetadataComponent("Camera-1"), initForce, start with { Position = new(15, 1, 1) });
-    em.AddEntity(new MeshComponent("antiqueCamera/AntiqueCamera.gltf"), new MetadataComponent("Camera-1"), initForce, start with { Position = new(15, 1, 2) });
+    // em.AddEntity(new MeshComponent("antiqueCamera/AntiqueCamera.gltf"), new MetadataComponent("Camera-1"), initForce, start with { Position = new(15, 1, 0) });
+    // em.AddEntity(new MeshComponent("antiqueCamera/AntiqueCamera.gltf"), new MetadataComponent("Camera-1"), initForce, start with { Position = new(15, 1, 1) });
+    // em.AddEntity(new MeshComponent("antiqueCamera/AntiqueCamera.gltf"), new MetadataComponent("Camera-1"), initForce, start with { Position = new(15, 1, 2) });
 
-    em.AddEntity(new MeshComponent("antiqueCamera/AntiqueCamera.gltf"), new MetadataComponent("Camera-1"), initForce, start with { Position = new(15, 0, -1) });
-    em.AddEntity(new MeshComponent("antiqueCamera/AntiqueCamera.gltf"), new MetadataComponent("Camera-1"), initForce, start with { Position = new(15, 0, 0) });
-    em.AddEntity(new MeshComponent("antiqueCamera/AntiqueCamera.gltf"), new MetadataComponent("Camera-1"), initForce, start with { Position = new(15, 0, 1) });
-    em.AddEntity(new MeshComponent("antiqueCamera/AntiqueCamera.gltf"), new MetadataComponent("Camera-1"), initForce, start with { Position = new(15, 0, 2) });
+    // em.AddEntity(new MeshComponent("antiqueCamera/AntiqueCamera.gltf"), new MetadataComponent("Camera-1"), initForce, start with { Position = new(15, 0, -1) });
+    // em.AddEntity(new MeshComponent("antiqueCamera/AntiqueCamera.gltf"), new MetadataComponent("Camera-1"), initForce, start with { Position = new(15, 0, 0) });
+    // em.AddEntity(new MeshComponent("antiqueCamera/AntiqueCamera.gltf"), new MetadataComponent("Camera-1"), initForce, start with { Position = new(15, 0, 1) });
+    // em.AddEntity(new MeshComponent("antiqueCamera/AntiqueCamera.gltf"), new MetadataComponent("Camera-1"), initForce, start with { Position = new(15, 0, 2) });
 
-    em.AddEntity(new MeshComponent("antiqueCamera/AntiqueCamera.gltf"), new MetadataComponent("Camera-1"), initForce, start with { Position = new(15, -1, -1) });
-    em.AddEntity(new MeshComponent("antiqueCamera/AntiqueCamera.gltf"), new MetadataComponent("Camera-1"), initForce, start with { Position = new(15, -1, 0) });
-    em.AddEntity(new MeshComponent("antiqueCamera/AntiqueCamera.gltf"), new MetadataComponent("Camera-1"), initForce, start with { Position = new(15, -1, 1) });
-    em.AddEntity(new MeshComponent("antiqueCamera/AntiqueCamera.gltf"), new MetadataComponent("Camera-1"), initForce, start with { Position = new(15, -1, 2) });
+    // em.AddEntity(new MeshComponent("antiqueCamera/AntiqueCamera.gltf"), new MetadataComponent("Camera-1"), initForce, start with { Position = new(15, -1, -1) });
+    // em.AddEntity(new MeshComponent("antiqueCamera/AntiqueCamera.gltf"), new MetadataComponent("Camera-1"), initForce, start with { Position = new(15, -1, 0) });
+    // em.AddEntity(new MeshComponent("antiqueCamera/AntiqueCamera.gltf"), new MetadataComponent("Camera-1"), initForce, start with { Position = new(15, -1, 1) });
+    // em.AddEntity(new MeshComponent("antiqueCamera/AntiqueCamera.gltf"), new MetadataComponent("Camera-1"), initForce, start with { Position = new(15, -1, 2) });
 
-    em.AddEntity(new MeshComponent("antiqueCamera/AntiqueCamera.gltf"), new MetadataComponent("Camera-1"), initForce, start with { Position = new(15, -2, -1) });
-    em.AddEntity(new MeshComponent("antiqueCamera/AntiqueCamera.gltf"), new MetadataComponent("Camera-1"), initForce, start with { Position = new(15, -2, 0) });
-    em.AddEntity(new MeshComponent("antiqueCamera/AntiqueCamera.gltf"), new MetadataComponent("Camera-1"), initForce, start with { Position = new(15, -2, 1) });
-    em.AddEntity(new MeshComponent("antiqueCamera/AntiqueCamera.gltf"), new MetadataComponent("Camera-1"), initForce, start with { Position = new(15, -2, 2) });
+    // em.AddEntity(new MeshComponent("antiqueCamera/AntiqueCamera.gltf"), new MetadataComponent("Camera-1"), initForce, start with { Position = new(15, -2, -1) });
+    // em.AddEntity(new MeshComponent("antiqueCamera/AntiqueCamera.gltf"), new MetadataComponent("Camera-1"), initForce, start with { Position = new(15, -2, 0) });
+    // em.AddEntity(new MeshComponent("antiqueCamera/AntiqueCamera.gltf"), new MetadataComponent("Camera-1"), initForce, start with { Position = new(15, -2, 1) });
+    // em.AddEntity(new MeshComponent("antiqueCamera/AntiqueCamera.gltf"), new MetadataComponent("Camera-1"), initForce, start with { Position = new(15, -2, 2) });
 
-    var amount = 1;
-    for (int j = -amount; j < amount; j++) {
-      for (int i = -amount; i < amount; i++) {
-        em.AddEntity(new MeshComponent("damagedHelmet/DamagedHelmet.glb"), new MetadataComponent($"Helmet-{j}-{i}"), initForce, start with { Position = new(10, i, j) });
-      }
-    }
+    // var amount = 1;
+    // for (int j = -amount; j < amount; j++) {
+    //   for (int i = -amount; i < amount; i++) {
+    //     em.AddEntity(new MeshComponent("damagedHelmet/DamagedHelmet.glb"), new MetadataComponent($"Helmet-{j}-{i}"), initForce, start with { Position = new(10, i, j) });
+    //   }
+    // }
 
     return Task.CompletedTask;
   }

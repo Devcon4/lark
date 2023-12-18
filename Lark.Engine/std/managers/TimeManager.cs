@@ -41,6 +41,6 @@ public class TimeManager(ILogger<TimeManager> logger) {
     lastFrame = now;
 
     // logger.LogInformation("FPS: {fps}", FPS);
-    logger.LogInformation("{Frame} \t:: Δ {deltaTime}ms \t:: {fps} \t:: High {highest} \t:: Low {low}", TotalFrames, DeltaTime.TotalMilliseconds, FPS, HighestFrameTime, LowestFrameTime);
+    logger.LogDebug("{Frame} \t:: Δ {deltaTime}ms \t:: {fps} \t:: High {highest} \t:: Low {low}", TotalFrames, DeltaTime.TotalMilliseconds, FPS, HighestFrameTime, LowestFrameTime);
   }
 }

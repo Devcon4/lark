@@ -19,6 +19,7 @@ public static class ServiceConfiguration {
 
   public static IServiceCollection AddLarkSTD(this IServiceCollection services) {
     services.AddSingleton<ILarkSystem, RenderSystem>();
+    services.AddSingleton<ILarkSystem, CameraSystem>();
     services.AddSingleton<TimeManager>();
 
     return services;

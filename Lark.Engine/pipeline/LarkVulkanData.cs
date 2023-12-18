@@ -24,7 +24,7 @@ public class LarkVulkanData {
 
   public Dictionary<Guid, LarkInstance> instances = new();
   public Dictionary<Guid, LarkModel> models = new();
-  public List<LarkCamera> cameras = new();
+  public Dictionary<Guid, LarkCamera> cameras = new();
 
   public bool EnableValidationLayers = true;
 
