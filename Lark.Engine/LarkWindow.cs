@@ -1,3 +1,4 @@
+using System.Numerics;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -30,7 +31,6 @@ public class LarkWindow(ILogger<LarkWindow> logger, IHostApplicationLifetime hos
     _glfw.SetWindowCloseCallback(windowHandle, (window) => {
       OnClosing();
     });
-
   }
 
   // getter that returns the window time.
@@ -96,6 +96,30 @@ public class LarkWindow(ILogger<LarkWindow> logger, IHostApplicationLifetime hos
       _glfw.GetFramebufferSize(windowHandle, out var width, out var height);
       return new Vector2D<int>(width, height);
     }
+  }
+
+  public unsafe void SetKeyCallback(Action<Keys, int, InputAction, KeyModifiers> keyCallback) {
+    _glfw.SetKeyCallback(windowHandle, (window, key, scancode, action, mods) => {
+      keyCallback(key, scancode, action, mods);
+    });
+  }
+
+  public unsafe void SetMouseButtonCallback(Action<MouseButton, InputAction, KeyModifiers> mouseButtonCallback) {
+    _glfw.SetMouseButtonCallback(windowHandle, (window, button, action, mods) => {
+      mouseButtonCallback(button, action, mods);
+    });
+  }
+
+  public unsafe void SetCursorPosCallback(Action<Vector2> cursorPosCallback) {
+    _glfw.SetCursorPosCallback(windowHandle, (window, x, y) => {
+      cursorPosCallback(new Vector2((float)x, (float)y));
+    });
+  }
+
+  public unsafe void SetScrollCallback(Action<Vector2> scrollCallback) {
+    _glfw.SetScrollCallback(windowHandle, (window, x, y) => {
+      scrollCallback(new Vector2((float)x, (float)y));
+    });
   }
 }
 

@@ -4,6 +4,12 @@ using System.Collections.Immutable;
 namespace Lark.Engine.ecs;
 
 public static class HashSetExtensions {
+
+  // GetList: Get all components of a type
+  public static ImmutableList<TComponent> GetList<TComponent>(this FrozenSet<ILarkComponent> hashSet) where TComponent : struct {
+    return hashSet.Where(c => c.GetType() == typeof(TComponent)).Select(c => (TComponent)c).ToImmutableList();
+  }
+
   public static TComponent Get<TComponent>(this FrozenSet<ILarkComponent> hashSet) where TComponent : struct {
     return (TComponent)hashSet.First(c => c.GetType() == typeof(TComponent));
   }

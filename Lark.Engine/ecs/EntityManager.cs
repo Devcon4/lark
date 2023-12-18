@@ -27,9 +27,9 @@ public class EntityManager(ILogger<EntityManager> logger) {
     }
 
     var componentTypes = components.Select(c => c.GetType()).ToFrozenSet();
-    if (componentTypes.Count != components.Length) {
-      throw new Exception($"Components must be unique on entity: {key}");
-    }
+    // if (componentTypes.Count != components.Length) {
+    //   throw new Exception($"Components must be unique on entity: {key}");
+    // }
 
     entities.TryAdd(key, components.ToFrozenSet());
     entityComponents.TryAdd(key, componentTypes);
@@ -50,6 +50,19 @@ public class EntityManager(ILogger<EntityManager> logger) {
   // GetTotalNumberOfEntities
   public int GetEntitiesCount() {
     return entities.Count;
+  }
+
+  // GetEntity(type[] componentTypes): Find the first entity that has all of the specified components.
+  public ValueTuple<Guid, FrozenSet<ILarkComponent>> GetEntity(params Type[] componentTypes) {
+    var componentTypeSet = new HashSet<Type>(componentTypes);
+
+    foreach (var entity in entities) {
+      if (entityComponents[entity.Key].IsSupersetOf(componentTypeSet)) {
+        return new(entity.Key, entity.Value);
+      }
+    }
+
+    throw new Exception("No entity found with specified components");
   }
 
   public ValueTuple<Guid, FrozenSet<ILarkComponent>> GetEntity(Guid key) {
