@@ -4,9 +4,9 @@ using Lark.Engine.ecs;
 namespace Lark.Engine.std;
 using ActionName = System.String;
 
-public record struct InputMapComponent: ILarkComponent {}
+public record struct InputMapComponent : ILarkComponent { }
 
-public record struct ActionMapComponent(ActionName ActionName, ILarkActionTrigger Trigger): ILarkComponent {
+public record struct ActionComponent(ActionName ActionName) : ILarkComponent {
   public Action<ActionName, ValueTuple<Guid, FrozenSet<ILarkComponent>>, ILarkInput> Action { get; init; }
 }
 

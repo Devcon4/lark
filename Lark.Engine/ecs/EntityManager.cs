@@ -92,6 +92,16 @@ public class EntityManager(ILogger<EntityManager> logger) {
     await Task.CompletedTask;
   }
 
+  public ValueTuple<Guid, FrozenSet<ILarkComponent>> GetEntityWithPredicate(Func<FrozenSet<ILarkComponent>, bool> predicate) {
+    foreach (var (key, components) in entities) {
+      if (predicate(components)) {
+        return new(key, components);
+      }
+    }
+
+    throw new Exception("No entity found with specified components");
+  }
+
   public void RemoveEntity(Guid key) {
     if (!entities.TryGetValue(key, out var value)) {
       throw new Exception("Entity does not exist");

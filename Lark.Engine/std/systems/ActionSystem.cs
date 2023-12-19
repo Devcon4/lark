@@ -4,14 +4,17 @@ using Lark.Engine.ecs;
 
 namespace Lark.Engine.std;
 
+public record struct ActionMapComponent(string ActionName, ILarkActionTrigger trigger) : ILarkComponent { }
+
 // TODO: Rework this so rather than being a system it uses the straight input callbacks.
 // I want actions to not be linked to framerate. 
 // Action maps also need to be reworked. I should be able to pass a name and action func and seperately associate an action to a trigger.
 // That will allow the triggers to be swapped out or remapped.
-public class ActionSystem(EntityManager em): LarkSystem {
-  public override Type[] RequiredComponents => [typeof(ActionMapComponent)];
+public class ActionSystem(EntityManager em) : LarkSystem {
+  public override Type[] RequiredComponents => [typeof(ActionComponent)];
 
   public override Task Init() {
+    em.AddEntity(new MetadataComponent("ActionMap"), new ActionMapComponent("MoveForward", new LarkKeyTrigger(LarkKeys.W)));
     return Task.CompletedTask;
   }
 
