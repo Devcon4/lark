@@ -59,9 +59,9 @@ public class CommandBufferSegment(LarkVulkanData data, ModelUtils modelUtils, Co
     // SetViewport
     var viewport = new Viewport {
       X = 0.0f,
-      Y = 0.0f,
+      Y = data.SwapchainExtent.Height, // flip y axis 
       Width = data.SwapchainExtent.Width,
-      Height = data.SwapchainExtent.Height,
+      Height = -data.SwapchainExtent.Height, // flip y axis
       MinDepth = 0.0f,
       MaxDepth = 1.0f
     };

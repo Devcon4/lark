@@ -4,31 +4,27 @@ using Lark.Engine.ecs;
 namespace Lark.Engine.std;
 using ActionName = System.String;
 
-public record struct InputMapComponent : ILarkComponent { }
+public record struct InputEntityMarker : ILarkComponent { }
 
-public record struct ActionComponent(ActionName ActionName) : ILarkComponent {
-  public Action<ActionName, ValueTuple<Guid, FrozenSet<ILarkComponent>>, ILarkInput> Action { get; init; }
-}
+public record struct ActionComponent(ActionName ActionName, Action<ValueTuple<Guid, FrozenSet<ILarkComponent>>, ILarkInput> Callback) : ILarkComponent { }
 
 public class InputSystem(EntityManager em, InputManager im, LarkWindow window) : LarkSystem {
   public override Type[] RequiredComponents => [
     typeof(SystemComponent),
-    typeof(InputMapComponent),
-    typeof(CurrentKeyInputComponent),
-    typeof(CurrentMouseInputComponent),
-    typeof(CurrentCursorInputComponent),
-    typeof(CurrentScrollInputComponent)
+    typeof(InputEntityMarker)
     ];
 
   public override Task Init() {
     em.AddEntity(
       new MetadataComponent("Input"),
       new SystemComponent(),
-      new InputMapComponent(),
-      new CurrentKeyInputComponent(),
+      new InputEntityMarker(),
+      new CurrentKeysInputComponent(),
       new CurrentMouseInputComponent(),
       new CurrentCursorInputComponent(),
       new CurrentScrollInputComponent());
+
+    em.AddEntity(new MetadataComponent("ActionMap"), new SystemComponent(), new LarkMapComponent(ActionManager.DefaultMap, true, []));
 
     window.SetKeyCallback(im.KeyCallbackAction);
     window.SetMouseButtonCallback(im.MouseButtonCallbackAction);
@@ -42,15 +38,10 @@ public class InputSystem(EntityManager em, InputManager im, LarkWindow window) :
   }
 
   public override void BeforeUpdate() {
-    var (key, components) = em.GetEntity(typeof(SystemComponent),
-    typeof(CurrentKeyInputComponent),
-    typeof(CurrentMouseInputComponent),
-    typeof(CurrentCursorInputComponent),
-    typeof(CurrentScrollInputComponent));
+    var (key, components) = em.GetEntity(InputManager.InputEntity);
 
-    em.UpdateEntityComponent(key, new CurrentKeyInputComponent());
     em.UpdateEntityComponent(key, new CurrentMouseInputComponent());
-    em.UpdateEntityComponent(key, new CurrentCursorInputComponent());
+    // em.UpdateEntityComponent(key, new CurrentCursorInputComponent());
     em.UpdateEntityComponent(key, new CurrentScrollInputComponent());
   }
 }

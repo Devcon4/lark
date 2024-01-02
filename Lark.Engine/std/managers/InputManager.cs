@@ -1,4 +1,5 @@
 
+using System.Collections.Frozen;
 using System.Numerics;
 using Lark.Engine.ecs;
 using Microsoft.Extensions.Logging;
@@ -6,32 +7,40 @@ using Silk.NET.GLFW;
 
 namespace Lark.Engine.std;
 
-public class InputManager(ILogger<InputManager> logger, EntityManager em) {
+public class InputManager(ILogger<InputManager> logger, LarkWindow window, EntityManager em, ActionManager am) {
 
   public static readonly Type[] InputEntity = [
     typeof(SystemComponent),
-    typeof(CurrentKeyInputComponent),
-    typeof(CurrentMouseInputComponent),
-    typeof(CurrentCursorInputComponent),
-    typeof(CurrentScrollInputComponent),
+    typeof(InputEntityMarker)
   ];
 
-  public void KeyCallbackAction(Keys key, int scancode, InputAction action, KeyModifiers mods) {
-    var (id, components) =  em.GetEntity(typeof(SystemComponent), typeof(CurrentKeyInputComponent));
-    var currentInput = components.Get<CurrentKeyInputComponent>();
+  public void SetCursorPosition(Vector2? position = null) {
+    window.SetCursorPosition(position);
+  }
 
-    var newInput = currentInput with {
-      Key = (LarkKeys)key,
-      Scancode = scancode,
-      Action = (LarkInputAction)action,
-      Mods = (LarkKeyModifiers)mods,
+  public void KeyCallbackAction(Keys key, int scancode, InputAction action, KeyModifiers mods) {
+    var (id, components) = em.GetEntity(typeof(SystemComponent), typeof(CurrentKeysInputComponent));
+    var pressedKeyInput = components.Get<CurrentKeysInputComponent>();
+    List<PressedKey> pressedKeys = pressedKeyInput.Keys.ToList();
+
+    if (action == InputAction.Release) {
+      pressedKeys.RemoveAll(k => k.Key == (LarkKeys)key);
+    }
+
+    if (action == InputAction.Press) {
+      pressedKeys.Add(new PressedKey((LarkKeys)key, (LarkKeyModifiers)mods));
+    }
+
+    var newInput = new CurrentKeysInputComponent() with {
+      Keys = pressedKeys.ToFrozenSet()
     };
 
     em.UpdateEntityComponent(id, newInput);
+    // am.UpdateAsync().Wait();
   }
 
   public void MouseButtonCallbackAction(MouseButton button, InputAction action, KeyModifiers mods) {
-    var (id, components) =  em.GetEntity(typeof(SystemComponent), typeof(CurrentMouseInputComponent));
+    var (id, components) = em.GetEntity(typeof(SystemComponent), typeof(CurrentMouseInputComponent));
     var currentInput = components.Get<CurrentMouseInputComponent>();
 
     var newInput = currentInput with {
@@ -41,10 +50,11 @@ public class InputManager(ILogger<InputManager> logger, EntityManager em) {
     };
 
     em.UpdateEntityComponent(id, newInput);
+    // am.UpdateAsync().Wait();
   }
 
   public void CursorPosCallbackAction(Vector2 position) {
-    var (id, components) =  em.GetEntity(typeof(SystemComponent), typeof(CurrentCursorInputComponent));
+    var (id, components) = em.GetEntity(typeof(SystemComponent), typeof(CurrentCursorInputComponent));
     var currentInput = components.Get<CurrentCursorInputComponent>();
 
     var newInput = currentInput with {
@@ -52,10 +62,11 @@ public class InputManager(ILogger<InputManager> logger, EntityManager em) {
     };
 
     em.UpdateEntityComponent(id, newInput);
+    // am.UpdateAsync().Wait();
   }
 
   public void ScrollCallbackAction(Vector2 offset) {
-    var (id, components) =  em.GetEntity(typeof(SystemComponent), typeof(CurrentScrollInputComponent));
+    var (id, components) = em.GetEntity(typeof(SystemComponent), typeof(CurrentScrollInputComponent));
     var currentInput = components.Get<CurrentScrollInputComponent>();
 
     var newInput = currentInput with {
@@ -63,13 +74,13 @@ public class InputManager(ILogger<InputManager> logger, EntityManager em) {
     };
 
     em.UpdateEntityComponent(id, newInput);
+    // am.UpdateAsync().Wait();
   }
 
 
 }
 
-public enum LarkMouseButton
-{
+public enum LarkMouseButton {
   Left,
   Right,
   Middle,
@@ -80,8 +91,7 @@ public enum LarkMouseButton
   Button8
 }
 
-public enum LarkInputAction
-{
+public enum LarkInputAction {
   //
   // Summary:
   //     The key or mouse button was pressed.
@@ -96,8 +106,7 @@ public enum LarkInputAction
   Repeat = 2
 }
 
-public enum LarkKeyModifiers
-{
+public enum LarkKeyModifiers {
   //
   // Summary:
   //     if one or more Shift keys were held down.
@@ -116,8 +125,7 @@ public enum LarkKeyModifiers
   Super = 8
 }
 
-public enum LarkKeys
-{
+public enum LarkKeys {
   //
   // Summary:
   //     An unknown key.

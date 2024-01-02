@@ -137,7 +137,27 @@ public class EntityManager(ILogger<EntityManager> logger) {
     var componentType = typeof(TComp);
     entitiesByComponentType[componentType].Remove(key);
 
+    var ecSet = entityComponents[key].ToHashSet();
+    ecSet.Remove(componentType);
+    entityComponents[key] = ecSet.ToFrozenSet();
+
     var newSet = value.Where(c => c.GetType() != componentType).ToHashSet();
+    entities[key] = newSet.ToFrozenSet();
+  }
+
+  // RemoveEntityComponent: Remove a component from an entity that matches a predicate.
+  public void RemoveEntityComponent(Guid key, Func<ILarkComponent, bool> predicate) {
+    if (!entities.TryGetValue(key, out var value)) {
+      throw new Exception("Entity does not exist");
+    }
+
+    var matchingComponents = value.Where(predicate).ToHashSet();
+    foreach (var component in matchingComponents) {
+      var componentType = component.GetType();
+      entitiesByComponentType[componentType].Remove(key);
+    }
+
+    var newSet = value.Where(c => !matchingComponents.Contains(c)).ToHashSet();
     entities[key] = newSet.ToFrozenSet();
   }
 
@@ -147,10 +167,19 @@ public class EntityManager(ILogger<EntityManager> logger) {
     }
 
     var componentType = typeof(TComp);
+    if (!entitiesByComponentType.TryGetValue(componentType, out var entitySet)) {
+      entitiesByComponentType.Add(componentType, []);
+    }
+
     entitiesByComponentType[componentType].Add(key);
 
-    var newSet = value.ToHashSet();
-    newSet.Add(component);
-    entities[key] = newSet.ToFrozenSet();
+    var eSet = value.ToHashSet();
+    eSet.Add(component);
+    entities[key] = eSet.ToFrozenSet();
+
+    // Add to entityComponents
+    var ecSet = entityComponents[key].ToHashSet();
+    ecSet.Add(componentType);
+    entityComponents[key] = ecSet.ToFrozenSet();
   }
 }

@@ -44,7 +44,7 @@ public class InstanceSegment(LarkWindow window, LarkVulkanData data) {
       ApplicationVersion = new Version32(1, 0, 0),
       PEngineName = (byte*)Marshal.StringToHGlobalAnsi("Lark Engine"),
       EngineVersion = new Version32(1, 0, 0),
-      ApiVersion = Vk.Version11
+      ApiVersion = Vk.Version10
     };
 
     var createInfo = new InstanceCreateInfo {
@@ -86,7 +86,8 @@ public class InstanceSegment(LarkWindow window, LarkVulkanData data) {
     }
 
     fixed (Instance* instance = &data.Instance) {
-      if (data.vk.CreateInstance(&createInfo, null, instance) != Result.Success) {
+      var res = data.vk.CreateInstance(&createInfo, null, instance);
+      if (res != Result.Success) {
         throw new Exception("Failed to create instance!");
       }
     }

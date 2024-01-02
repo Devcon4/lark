@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Hosting;
@@ -11,6 +12,9 @@ namespace Lark.Engine;
 public class LarkWindow(ILogger<LarkWindow> logger, IHostApplicationLifetime hostLifetime) {
   private readonly Glfw _glfw = Glfw.GetApi();
   public unsafe WindowHandle* windowHandle = null!;
+  public Vector2 ViewportSize => new(FramebufferSize.X, FramebufferSize.Y);
+
+  public Stopwatch sw = new();
   public unsafe void Build() {
     _glfw.Init();
 
@@ -55,8 +59,11 @@ public class LarkWindow(ILogger<LarkWindow> logger, IHostApplicationLifetime hos
     return _glfw.VulkanSupported();
   }
 
-  public unsafe void DoEvents() {
+  public void DoEvents() {
+    sw.Stop();
+    // logger.LogInformation("Polling events at {time}...", sw.ElapsedMilliseconds);
     _glfw.PollEvents();
+    sw.Restart();
   }
 
   private unsafe bool ShouldClose() {
@@ -72,7 +79,7 @@ public class LarkWindow(ILogger<LarkWindow> logger, IHostApplicationLifetime hos
   public void Run(Action drawFrame) {
     logger.LogInformation("Running window...");
     while (!ShouldClose()) {
-      _glfw.PollEvents();
+      DoEvents();
       drawFrame();
     }
   }
@@ -80,7 +87,7 @@ public class LarkWindow(ILogger<LarkWindow> logger, IHostApplicationLifetime hos
   public async Task Run(Func<Task> drawFrame) {
     logger.LogInformation("Running window...");
     while (!ShouldClose()) {
-      _glfw.PollEvents();
+      DoEvents();
       await drawFrame();
     }
   }
@@ -96,6 +103,18 @@ public class LarkWindow(ILogger<LarkWindow> logger, IHostApplicationLifetime hos
       _glfw.GetFramebufferSize(windowHandle, out var width, out var height);
       return new Vector2D<int>(width, height);
     }
+  }
+
+  public unsafe void SetCursorMode(CursorModeValue cursorMode, bool raw = true) {
+    if (raw && cursorMode is not CursorModeValue.CursorDisabled) {
+      throw new Exception("Raw mouse input is only supported when the cursor is disabled.");
+    }
+
+    if (raw && _glfw.RawMouseMotionSupported()) {
+      _glfw.SetInputMode(windowHandle, CursorStateAttribute.RawMouseMotion, true);
+    }
+
+    _glfw.SetInputMode(windowHandle, CursorStateAttribute.Cursor, cursorMode);
   }
 
   public unsafe void SetKeyCallback(Action<Keys, int, InputAction, KeyModifiers> keyCallback) {
@@ -121,6 +140,15 @@ public class LarkWindow(ILogger<LarkWindow> logger, IHostApplicationLifetime hos
       scrollCallback(new Vector2((float)x, (float)y));
     });
   }
+
+  internal unsafe void SetCursorPosition(Vector2? position) {
+    if (position is null) {
+      // If null set to center of window
+      position = new Vector2(FramebufferSize.X / 2, FramebufferSize.Y / 2);
+    }
+    _glfw.SetCursorPos(windowHandle, (float)position?.X, (float)position?.Y);
+  }
+
 }
 
 // public class LarkWindow(ILogger<LarkWindow> logger, IHostApplicationLifetime hostLifetime) {

@@ -64,8 +64,8 @@ public class UniformBufferSegment(LarkVulkanData data, LarkWindow larkWindow, Bu
     var time = (float)larkWindow.Time;
     // Build ubo from camera.
     var uboData = new UniformBufferObject {
-      view = Matrix4X4.Transform(Matrix4X4.CreateTranslation(camera.Transform.Translation), camera.Transform.Rotation),
-      proj = Matrix4X4.CreatePerspectiveFieldOfView(Scalar.DegreesToRadians(camera.Fov), camera.AspectRatio, camera.Near, camera.Far),
+      view = camera.View.ToGeneric(),
+      proj = camera.Projection.ToGeneric(),
       lightPos = new Vector3D<float>(10, 10, 15),
       viewPos = camera.Transform.Translation
     };
@@ -88,8 +88,9 @@ public class UniformBufferSegment(LarkVulkanData data, LarkWindow larkWindow, Bu
     // convert uboData.model to a direction vector.
     var direction = new Vector3D<float>(uboData.model.M13, uboData.model.M23, uboData.model.M33);
 
+    // Because we flip the viewport we shouldn't need to flip the Y coordinate anymore.
     // Flip the Y coordinate because Vulkan is left handed.
-    uboData.proj.M22 *= -1;
+    // uboData.proj.M22 *= -1;
 
     void* dataPtr;
     data.vk.MapMemory(data.Device, data.UniformBuffers[currentFrame].Memory, 0, (ulong)sizeof(UniformBufferObject), 0, &dataPtr);

@@ -1,4 +1,5 @@
 
+using System.Collections.Frozen;
 using System.Numerics;
 using Lark.Engine.ecs;
 
@@ -8,23 +9,20 @@ public interface ILarkActionTrigger {
   public bool Check(ILarkInput trigger);
 }
 
-public interface ILarkInput {}
+public interface ILarkInput { }
 
 // KeyButton
-public interface ILarkKeyInput: ILarkInput {
+public interface ILarkKeyInput : ILarkInput {
   public LarkKeys Key { get; init; }
-  public LarkInputAction? Action { get; init; }
   public LarkKeyModifiers? Mods { get; init; }
 }
 
-public record struct LarkKeyTrigger: ILarkActionTrigger, ILarkKeyInput {
+public record struct LarkKeyTrigger : ILarkActionTrigger, ILarkKeyInput {
   public LarkKeys Key { get; init; }
-  public LarkInputAction? Action { get; init; }
   public LarkKeyModifiers? Mods { get; init; }
 
-  public LarkKeyTrigger(LarkKeys key, LarkInputAction? action = null, LarkKeyModifiers? mods = null) {
+  public LarkKeyTrigger(LarkKeys key, LarkKeyModifiers? mods = null) {
     Key = key;
-    Action = action;
     Mods = mods;
   }
 
@@ -32,29 +30,31 @@ public record struct LarkKeyTrigger: ILarkActionTrigger, ILarkKeyInput {
     if (input is not ILarkKeyInput keyInput) return false;
 
     return keyInput.Key == Key &&
-      (Action is null || keyInput.Action == Action) &&
       (Mods is null || keyInput.Mods == Mods);
   }
 }
 
-public record struct CurrentKeyInputComponent: ILarkComponent, ILarkKeyInput {
-  public LarkKeys Key { get; init; }
-  public int Scancode { get; init; }
-  public LarkInputAction? Action { get; init; }
-  public LarkKeyModifiers? Mods { get; init; }
+public record struct PressedKey(LarkKeys Key, LarkKeyModifiers? Mods = null) : ILarkKeyInput {
+  public LarkKeys Key { get; init; } = Key;
+  public LarkKeyModifiers? Mods { get; init; } = Mods;
+}
 
-  public readonly ValueTuple<LarkKeys, LarkInputAction?, LarkKeyModifiers?> KeyActionMods => new(Key, Action, Mods);
-  public readonly ValueTuple<LarkKeys, LarkInputAction?> KeyActions => new(Key, Action);
+public record struct CurrentKeysInputComponent() : ILarkComponent {
+
+  public FrozenSet<PressedKey> Keys { get; init; } = FrozenSet<PressedKey>.Empty;
+
+  // public readonly ValueTuple<LarkKeys, LarkKeyModifiers?> KeyMods => new(Key, Mods);
+  // public readonly ValueTuple<LarkKeys, LarkInputAction?> KeyActions => new(Key, Action);
 }
 
 // MouseButton
-public interface ILarkMouseInput: ILarkInput {
+public interface ILarkMouseInput : ILarkInput {
   public LarkMouseButton Button { get; init; }
   public LarkInputAction Action { get; init; }
   public LarkKeyModifiers Mods { get; init; }
 }
 
-public record struct LarkMouseTrigger: ILarkActionTrigger, ILarkMouseInput {
+public record struct LarkMouseTrigger : ILarkActionTrigger, ILarkMouseInput {
   public LarkMouseButton Button { get; init; }
   public LarkInputAction Action { get; init; }
   public LarkKeyModifiers Mods { get; init; }
@@ -65,18 +65,18 @@ public record struct LarkMouseTrigger: ILarkActionTrigger, ILarkMouseInput {
   }
 }
 
-public record struct CurrentMouseInputComponent: ILarkComponent, ILarkMouseInput {
+public record struct CurrentMouseInputComponent : ILarkComponent, ILarkMouseInput {
   public LarkMouseButton Button { get; init; }
   public LarkInputAction Action { get; init; }
   public LarkKeyModifiers Mods { get; init; }
 }
 
 // Cursor
-public interface ILarkCursorInput: ILarkInput {
+public interface ILarkCursorInput : ILarkInput {
   public Vector2 Position { get; init; }
 }
 
-public record struct LarkCursorTrigger: ILarkActionTrigger, ILarkCursorInput {
+public record struct LarkCursorTrigger : ILarkActionTrigger, ILarkCursorInput {
   public Vector2 Position { get; init; }
 
   public bool Check(ILarkInput input) {
@@ -85,16 +85,16 @@ public record struct LarkCursorTrigger: ILarkActionTrigger, ILarkCursorInput {
   }
 }
 
-public record struct CurrentCursorInputComponent: ILarkComponent, ILarkCursorInput {
+public record struct CurrentCursorInputComponent : ILarkComponent, ILarkCursorInput {
   public Vector2 Position { get; init; }
 }
 
 // Scroll
-public interface ILarkScrollInput: ILarkInput {
+public interface ILarkScrollInput : ILarkInput {
   public Vector2 Offset { get; init; }
 }
 
-public record struct LarkScrollTrigger: ILarkActionTrigger, ILarkScrollInput {
+public record struct LarkScrollTrigger : ILarkActionTrigger, ILarkScrollInput {
   public Vector2 Offset { get; init; }
 
   public bool Check(ILarkInput input) {
@@ -103,6 +103,6 @@ public record struct LarkScrollTrigger: ILarkActionTrigger, ILarkScrollInput {
   }
 }
 
-public record struct CurrentScrollInputComponent: ILarkComponent, ILarkScrollInput {
+public record struct CurrentScrollInputComponent : ILarkComponent, ILarkScrollInput {
   public Vector2 Offset { get; init; }
 }

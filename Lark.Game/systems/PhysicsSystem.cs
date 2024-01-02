@@ -7,7 +7,7 @@ using Lark.Game.components;
 namespace Lark.Game.systems;
 
 public class PhysicsSystem(EntityManager em, TimeManager tm) : LarkSystem {
-  public override Type[] RequiredComponents => new Type[] { typeof(TransformComponent), typeof(ForceComponent) };
+  public override Type[] RequiredComponents => new Type[] { typeof(Engine.std.TransformComponent), typeof(ForceComponent) };
 
   public override Task Init() {
     // var start = new TransformComponent(new(10, 0, 0), Vector3.One, Quaternion.Identity);
@@ -44,7 +44,7 @@ public class PhysicsSystem(EntityManager em, TimeManager tm) : LarkSystem {
 
   public override void Update((Guid, FrozenSet<ILarkComponent>) Entity) {
     var (key, components) = Entity;
-    var (transform, force) = components.Get<TransformComponent, ForceComponent>();
+    var (transform, force) = components.Get<Engine.std.TransformComponent, ForceComponent>();
 
     if (transform.Position.X > 40 || transform.Position.X < 0) {
       force = force with {

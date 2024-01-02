@@ -47,4 +47,8 @@ public static class HashSetExtensions {
       (TComponent5)hashSet.First(c => c.GetType() == typeof(TComponent5))
     );
   }
+
+  public static bool Has<TComponent>(this FrozenSet<ILarkComponent> hashSet) where TComponent : struct {
+    return hashSet.Any(c => c.GetType() == typeof(TComponent));
+  }
 }

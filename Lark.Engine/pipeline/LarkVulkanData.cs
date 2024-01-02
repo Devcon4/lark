@@ -20,7 +20,7 @@ public class LarkVulkanData {
   public Stopwatch sw = new();
 
   public readonly Vk vk = Vk.GetApi();
-  public const int MaxFramesInFlight = 8;
+  public const int MaxFramesInFlight = 3;
 
   public Dictionary<Guid, LarkInstance> instances = new();
   public Dictionary<Guid, LarkModel> models = new();
@@ -101,7 +101,8 @@ public class LarkVulkanData {
 
   public string[]? ValidationLayers;
 
-  public string[] InstanceExtensions = { ExtDebugUtils.ExtensionName };
+  public string[] InstanceExtensions = { }; // Laptop can't use VK_KHR_debug_utils for some reason. Just disable it for now.
+  // public string[] InstanceExtensions = { ExtDebugUtils.ExtensionName };
   public string[] DeviceExtensions = { KhrSwapchain.ExtensionName };
   public int CurrF;
   public readonly string[][] ValidationLayerNamesPriorityList = new string[][] {

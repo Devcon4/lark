@@ -14,8 +14,9 @@ public static class ServiceConfiguration {
   public static IServiceCollection AddGameSystems(this IServiceCollection services) {
     services.AddSingleton<ILarkSystem, LoggerSystem>();
     services.AddSingleton<ILarkSystem, PhysicsSystem>();
-    services.AddSingleton<ILarkSystem, GravitySystem>();
     services.AddSingleton<ILarkSystem, InitSystem>();
+    services.AddSingleton<ILarkSystem, JumpSystem>();
+    services.AddSingleton<ILarkSystem, VelocitySystem>();
     return services;
   }
 }

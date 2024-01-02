@@ -1,10 +1,12 @@
 using System.Collections.Frozen;
+using System.Numerics;
 using Lark.Engine.ecs;
 using Lark.Engine.Model;
 using Lark.Engine.Pipeline;
 using Silk.NET.Maths;
 
 namespace Lark.Engine.std;
+
 
 public class CameraSystem(EntityManager em, LarkVulkanData data) : LarkSystem {
   public override Type[] RequiredComponents => [typeof(MetadataComponent), typeof(TransformComponent), typeof(CameraComponent)];
@@ -38,6 +40,7 @@ public class CameraSystem(EntityManager em, LarkVulkanData data) : LarkSystem {
     var newCamera = cameraLookup[key] with {
       Active = camera.Active,
       AspectRatio = camera.AspectRatio,
+      ViewportSize = new Vector2(data.SwapchainExtent.Width, data.SwapchainExtent.Height),
       Far = camera.Far,
       Near = camera.Near,
       Fov = camera.Fov,

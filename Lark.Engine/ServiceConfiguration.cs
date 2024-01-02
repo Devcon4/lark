@@ -2,6 +2,7 @@ using Lark.Engine.ecs;
 using Lark.Engine.Model;
 using Lark.Engine.Pipeline;
 using Lark.Engine.std;
+using Lark.Engine.std.systems;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Lark.Engine;
@@ -21,10 +22,13 @@ public static class ServiceConfiguration {
     services.AddSingleton<ILarkSystem, RenderSystem>();
     services.AddSingleton<ILarkSystem, CameraSystem>();
     services.AddSingleton<ILarkSystem, InputSystem>();
-    services.AddSingleton<ILarkSystem, ActionSystem>();
+    services.AddSingleton<ILarkSystem, CurrentKeySystem>();
 
     services.AddSingleton<TimeManager>();
     services.AddSingleton<InputManager>();
+    services.AddSingleton<ActionManager>();
+    services.AddSingleton<ShutdownManager>();
+    services.AddSingleton<CameraManager>();
 
     return services;
   }

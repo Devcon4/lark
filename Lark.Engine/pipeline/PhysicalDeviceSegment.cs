@@ -1,8 +1,10 @@
+using System.Runtime.InteropServices;
+using Microsoft.Extensions.Logging;
 using Silk.NET.Vulkan;
 
 namespace Lark.Engine.Pipeline;
 
-public class PhysicalDeviceSegment(LarkVulkanData data, SwapchainSupportUtil swapchainSupportUtil, QueueFamilyUtil queueFamilyUtil) {
+public class PhysicalDeviceSegment(LarkVulkanData data, SwapchainSupportUtil swapchainSupportUtil, QueueFamilyUtil queueFamilyUtil, ILogger<PhysicalDeviceSegment> logger) {
   public unsafe void PickPhysicalDevice() {
     var devices = data.vk.GetPhysicalDevices(data.Instance);
 
@@ -12,7 +14,7 @@ public class PhysicalDeviceSegment(LarkVulkanData data, SwapchainSupportUtil swa
 
     data.PhysicalDevice = devices.FirstOrDefault(device => {
       var indices = queueFamilyUtil.FindQueueFamilies(device);
-
+      
       var extensionsSupported = CheckDeviceExtensionSupport(device);
 
       var swapChainAdequate = false;

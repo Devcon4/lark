@@ -1,11 +1,40 @@
+using System.Diagnostics;
 using Lark.Engine.ecs;
+using Microsoft.Extensions.Logging;
 
 namespace Lark.Engine.std;
-public class ActionManager(EntityManager em) {
+public class ActionManager(EntityManager em, ILogger<ActionManager> logger) {
   public static Type[] ActionMapEntity => [typeof(SystemComponent), typeof(LarkMapComponent)];
+  public static string DefaultMap => "Default";
 
   public void CreateActionMap(string mapName) {
-    em.AddEntity(new LarkMapComponent(mapName, false, []));
+    var (id, _) = em.GetEntity(ActionMapEntity);
+    em.AddEntityComponent(id, new LarkMapComponent(mapName, false, []));
+  }
+
+  public void RemoveActionMap(string mapName) {
+    var (id, _) = em.GetEntity(ActionMapEntity);
+    em.RemoveEntityComponent(id, c => c is LarkMapComponent map && map.MapName == mapName);
+  }
+
+  // RenameActionMap
+
+  public void RenameActionMap(string oldName, string newName) {
+    var (id, components) = em.GetEntity(ActionMapEntity);
+
+    LarkMapComponent? existing = components.GetList<LarkMapComponent>().FirstOrDefault(c => c.MapName == newName);
+    if (existing is null) {
+      throw new Exception($"Action map {newName} already exists");
+    }
+
+    LarkMapComponent? old = components.GetList<LarkMapComponent>().FirstOrDefault(c => c.MapName == oldName);
+    if (old is null) {
+      throw new Exception($"Action map {oldName} does not exist");
+    }
+
+    em.UpdateEntityComponent(id, (LarkMapComponent)old with {
+      MapName = newName
+    });
   }
 
   public void AddActionToMap(string mapName, string actionName, ILarkActionTrigger trigger) {
@@ -60,6 +89,46 @@ public class ActionManager(EntityManager em) {
     em.UpdateEntityComponent(newKey, newMap with {
       Active = true
     });
+  }
+
+  public async Task UpdateAsync() {
+    await foreach (var entity in em.GetEntitiesWithComponents(typeof(ActionComponent), typeof(MetadataComponent))) {
+      var (key, components) = entity;
+      var name = components.Get<MetadataComponent>().Name;
+      var (_, mapComponents) = em.GetEntity(ActionMapEntity);
+      var actionMap = mapComponents.GetList<LarkMapComponent>().FirstOrDefault(m => m.Active);
+      var actions = components.GetList<ActionComponent>();
+
+      foreach (var action in actions) {
+        actionMap.Bindings.TryGetValue(action.ActionName, out ILarkActionTrigger? trigger);
+
+        if (trigger is null) {
+          logger.LogWarning("Action {actionName} does not exist in map {mapName}", action.ActionName, actionMap.MapName);
+          return;
+        }
+
+        var (id, input) = em.GetEntity(InputManager.InputEntity);
+        var (keyInputs, mouseInput, cursorInput, scrollInput) = input.Get<CurrentKeysInputComponent, CurrentMouseInputComponent, CurrentCursorInputComponent, CurrentScrollInputComponent>();
+
+        foreach (var keyInput in keyInputs.Keys) {
+          if (trigger.Check(keyInput)) {
+            action.Callback(entity, keyInput);
+          }
+        }
+
+        if (trigger.Check(mouseInput)) {
+          action.Callback(entity, mouseInput);
+        }
+
+        if (trigger.Check(cursorInput)) {
+          action.Callback(entity, cursorInput);
+        }
+
+        if (trigger.Check(scrollInput)) {
+          action.Callback(entity, scrollInput);
+        }
+      }
+    }
   }
 }
 

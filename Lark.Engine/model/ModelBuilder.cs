@@ -37,19 +37,22 @@ public struct LarkTexture {
 
 // LarkCamera
 public struct LarkCamera {
-  public bool Active;
-  public LarkTransform Transform;
-  public float Fov;
-  public float Near;
-  public float Far;
-  public float AspectRatio;
+  public bool Active = false;
+  public LarkTransform Transform = new();
+  public float Fov = 90f;
+  public float Near = 0.1f;
+  public float Far = 1000f;
+  public float AspectRatio = 16f / 9f;
 
-  public LarkCamera(LarkTransform transform, float fov, float near, float far, float aspectRatio, bool active = false) {
+  public Vector2 ViewportSize = new(1080, 720);
+
+  public LarkCamera(LarkTransform transform, float fov, float near, float far, float aspectRatio, Vector2 viewportSize, bool active = false) {
     Transform = transform;
     Fov = fov;
     Near = near;
     Far = far;
     AspectRatio = aspectRatio;
+    ViewportSize = viewportSize;
     Active = active;
   }
 
@@ -61,8 +64,45 @@ public struct LarkCamera {
     100f,
     0.1f,
     100f,
-    16 / 9f
+    16 / 9f,
+    new Vector2(1080, 720)
   );
+
+  public readonly Matrix4x4 View => Matrix4x4.Transform(Matrix4x4.CreateTranslation(Transform.Translation.ToSystem()), Transform.Rotation.ToSystem());
+  public readonly Matrix4x4 Projection => Matrix4x4.CreatePerspectiveFieldOfView(Scalar.DegreesToRadians(Fov), AspectRatio, Near, Far);
+
+  public readonly Matrix4x4 InvertView {
+    get {
+      Matrix4x4.Invert(View, out var invertView);
+      return invertView;
+    }
+  }
+
+  public readonly Matrix4x4 InvertProjection {
+    get {
+      Matrix4x4.Invert(Projection, out var invertProjection);
+      return invertProjection;
+    }
+  }
+
+  // Matrix translating from [-1,-1]:[1,1] to [0,0]:[ViewportSize]; he order of operations of the matrix is to scale by half the screen size, then to translate by half the screen size.
+  public Matrix4x4 ViewToScreen => Matrix4x4.CreateScale(0.5f * ViewportSize.X, 0.5f * ViewportSize.Y, 1) * Matrix4x4.CreateTranslation(0.5f * ViewportSize.X, 0.5f * ViewportSize.Y, 0);
+  public Matrix4x4 ScreenToView => Matrix4x4.CreateTranslation(-0.5f * ViewportSize.X, -0.5f * ViewportSize.Y, 0) * Matrix4x4.CreateScale(2f / ViewportSize.X, 2f / ViewportSize.Y, 1);
+
+  public Matrix4x4 ScreenToWorld => ScreenToView * InvertView * InvertProjection * Transform.ToInverseMatrix().ToSystem();
+  public Matrix4x4 WorldToScreen => Transform.ToMatrix().ToSystem() * Projection * View * ViewToScreen;
+
+  public Vector3 ProjectTo(Vector2 screenPosition, float zDepth) {
+    var p = new Vector4(screenPosition.X, screenPosition.Y, 1, zDepth);
+    var matrix = ScreenToView * InvertView * InvertProjection * Transform.ToInverseMatrix().ToSystem();
+    var result = Vector4.Transform(p, matrix);
+    result /= result.W;
+    var final = new Vector3(-result.X, -result.Y, -result.Z);
+    return final;
+  }
+
+  public Vector3 ProjectToNear(Vector2 screenPosition) => ProjectTo(screenPosition, Near);
+  public Vector3 ProjectToFar(Vector2 screenPosition) => ProjectTo(screenPosition, Far);
 
   public void SetAspectRatio(float aspectRatio) {
     AspectRatio = aspectRatio;
@@ -129,6 +169,11 @@ public struct LarkTransform {
   // ToMatrix4x4: Convert the LarkTransform to a Matrix4x4.
   public readonly Matrix4X4<float> ToMatrix() {
     return (Matrix4x4.CreateScale((Vector3)Scale) * Matrix4x4.CreateFromQuaternion((Quaternion)Rotation) * Matrix4x4.CreateTranslation((Vector3)Translation)).ToGeneric();
+  }
+
+  public readonly Matrix4X4<float> ToInverseMatrix() {
+    Matrix4X4.Invert(ToMatrix(), out var inverse);
+    return inverse;
   }
 }
 

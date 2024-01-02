@@ -14,6 +14,8 @@ public class TimeManager(ILogger<TimeManager> logger) {
   private DateTime lastFrame = DateTime.Now;
   private TimeSpan FpsTime { get; set; } = TimeSpan.Zero;
   private int FrameCount { get; set; } = 0;
+  private int LastSecond { get; set; } = 0;
+
 
   public void Update() {
     var now = DateTime.Now;
@@ -40,7 +42,11 @@ public class TimeManager(ILogger<TimeManager> logger) {
 
     lastFrame = now;
 
-    // logger.LogInformation("FPS: {fps}", FPS);
+    if (TotalTime.Seconds != LastSecond) {
+      LastSecond = TotalTime.Seconds;
+      logger.LogInformation("FPS: {fps}, Last: {lastsecond}", FPS, LastSecond);
+    }
+
     logger.LogDebug("{Frame} \t:: Δ {deltaTime}ms \t:: {fps} \t:: High {highest} \t:: Low {low}", TotalFrames, DeltaTime.TotalMilliseconds, FPS, HighestFrameTime, LowestFrameTime);
   }
 }
