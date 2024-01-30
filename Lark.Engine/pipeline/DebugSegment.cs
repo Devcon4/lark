@@ -2,7 +2,7 @@ using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 using Silk.NET.Vulkan;
 
-namespace Lark.Engine.Pipeline;
+namespace Lark.Engine.pipeline;
 public class DebugSegment(LarkVulkanData data, ILogger<DebugSegment> logger) {
   public unsafe void SetupDebugMessenger() {
     if (!data.EnableValidationLayers) return;

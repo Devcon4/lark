@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Silk.NET.Vulkan;
 
-namespace Lark.Engine.Pipeline;
+namespace Lark.Engine.pipeline;
 
 public class CommandPoolSegment(LarkVulkanData data, QueueFamilyUtil queueFamilyUtil, ILogger<CommandPoolSegment> logger) {
   public unsafe void CreateCommandPool() {

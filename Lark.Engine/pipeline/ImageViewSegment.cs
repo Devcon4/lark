@@ -1,6 +1,6 @@
 using Silk.NET.Vulkan;
 
-namespace Lark.Engine.Pipeline;
+namespace Lark.Engine.pipeline;
 
 public class ImageViewSegment(LarkVulkanData data) {
   public unsafe void CreateImageViews() {

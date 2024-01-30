@@ -4,7 +4,7 @@ using Silk.NET.Core.Native;
 using Silk.NET.Vulkan;
 using System.Runtime.InteropServices;
 
-namespace Lark.Engine.Pipeline;
+namespace Lark.Engine.pipeline;
 
 public class InstanceSegment(LarkWindow window, LarkVulkanData data) {
   private unsafe string[]? GetOptimalValidationLayers() {

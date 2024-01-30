@@ -1,6 +1,6 @@
 using Silk.NET.Vulkan;
 
-namespace Lark.Engine.Pipeline;
+namespace Lark.Engine.pipeline;
 
 public class RenderPassSegment(LarkVulkanData data, ImageUtils imageUtils) {
   public unsafe void CreateRenderPass() {

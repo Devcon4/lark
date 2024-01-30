@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Silk.NET.Vulkan;
 
-namespace Lark.Engine.Pipeline;
+namespace Lark.Engine.pipeline;
 
 // SamplerSegment.
 // Creates samplers for textures.

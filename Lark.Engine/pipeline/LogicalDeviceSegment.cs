@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 using Silk.NET.Core.Native;
 using Silk.NET.Vulkan;
 
-namespace Lark.Engine.Pipeline;
+namespace Lark.Engine.pipeline;
 
 public class LogicalDeviceSegment(LarkVulkanData data, QueueFamilyUtil queueFamilyUtil, ILogger<LogicalDeviceSegment> logger) {
   public unsafe void CreateLogicalDevice() {

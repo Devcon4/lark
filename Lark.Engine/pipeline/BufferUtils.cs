@@ -1,6 +1,6 @@
 using Silk.NET.Vulkan;
 using Buffer = Silk.NET.Vulkan.Buffer;
-namespace Lark.Engine.Pipeline;
+namespace Lark.Engine.pipeline;
 
 public struct BufferAllocInfo {
   public BufferUsageFlags Usage;

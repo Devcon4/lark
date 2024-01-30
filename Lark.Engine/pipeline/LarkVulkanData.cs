@@ -9,7 +9,7 @@ using Lark.Engine.Model;
 using System.Diagnostics;
 using System.Collections.Concurrent;
 
-namespace Lark.Engine.Pipeline;
+namespace Lark.Engine.pipeline;
 
 public struct DescriptorLayouts {
   public DescriptorSetLayout matricies;
@@ -101,8 +101,8 @@ public class LarkVulkanData {
 
   public string[]? ValidationLayers;
 
-  public string[] InstanceExtensions = { }; // Laptop can't use VK_KHR_debug_utils for some reason. Just disable it for now.
-  // public string[] InstanceExtensions = { ExtDebugUtils.ExtensionName };
+  // public string[] InstanceExtensions = { }; // Laptop can't use VK_KHR_debug_utils for some reason. Just disable it for now.
+  public string[] InstanceExtensions = { ExtDebugUtils.ExtensionName };
   public string[] DeviceExtensions = { KhrSwapchain.ExtensionName };
   public int CurrF;
   public readonly string[][] ValidationLayerNamesPriorityList = new string[][] {

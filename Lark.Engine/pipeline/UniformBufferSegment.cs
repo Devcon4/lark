@@ -7,7 +7,7 @@ using Silk.NET.Maths;
 using Silk.NET.Vulkan;
 using Buffer = Silk.NET.Vulkan.Buffer;
 
-namespace Lark.Engine.Pipeline;
+namespace Lark.Engine.pipeline;
 
 public struct UniformBufferObject {
   public Matrix4X4<float> model;

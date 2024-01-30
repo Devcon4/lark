@@ -1,7 +1,7 @@
 using Silk.NET.Core.Native;
 using Silk.NET.Vulkan;
 
-namespace Lark.Engine.Pipeline;
+namespace Lark.Engine.pipeline;
 
 public class SurfaceSegment(LarkVulkanData data, LarkWindow larkWindow) {
   public unsafe void CreateSurface() {

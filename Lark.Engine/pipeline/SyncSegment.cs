@@ -2,7 +2,7 @@ using Microsoft.Extensions.Logging;
 using Silk.NET.Vulkan;
 using Semaphore = Silk.NET.Vulkan.Semaphore;
 
-namespace Lark.Engine.Pipeline;
+namespace Lark.Engine.pipeline;
 
 public class SyncSegment(LarkVulkanData data, ILogger<SyncSegment> logger) {
   public unsafe void CreateSyncObjects() {

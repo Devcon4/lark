@@ -4,7 +4,7 @@ using Silk.NET.Maths;
 using Silk.NET.Vulkan;
 using Image = Silk.NET.Vulkan.Image;
 
-namespace Lark.Engine.Pipeline;
+namespace Lark.Engine.pipeline;
 
 public class SwapchainSegment(LarkVulkanData data,
     LarkWindow larkWindow,

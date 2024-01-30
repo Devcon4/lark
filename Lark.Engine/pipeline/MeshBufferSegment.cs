@@ -6,7 +6,7 @@ using Silk.NET.Maths;
 using Silk.NET.Vulkan;
 using Buffer = Silk.NET.Vulkan.Buffer;
 
-namespace Lark.Engine.Pipeline;
+namespace Lark.Engine.pipeline;
 
 public struct Vertex(Vector3D<float> pos, Vector3D<float> normal, Vector2D<float> uv, Vector3D<float> color) {
   public Vector3D<float> Pos = pos;

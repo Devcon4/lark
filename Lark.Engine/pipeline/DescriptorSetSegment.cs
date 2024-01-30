@@ -2,7 +2,7 @@ using Microsoft.Extensions.Logging;
 using Silk.NET.Maths;
 using Silk.NET.Vulkan;
 
-namespace Lark.Engine.Pipeline;
+namespace Lark.Engine.pipeline;
 
 public class DescriptorSetSegment(LarkVulkanData data, ILogger<DescriptorSetSegment> logger) {
 

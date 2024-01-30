@@ -4,7 +4,7 @@ using Silk.NET.Maths;
 using Silk.NET.Vulkan;
 using Buffer = Silk.NET.Vulkan.Buffer;
 
-namespace Lark.Engine.Pipeline;
+namespace Lark.Engine.pipeline;
 
 public class CommandBufferSegment(LarkVulkanData data, ModelUtils modelUtils, CommandUtils commandUtils, ILogger<CommandBufferSegment> logger) {
 
@@ -57,11 +57,19 @@ public class CommandBufferSegment(LarkVulkanData data, ModelUtils modelUtils, Co
     data.vk.CmdBeginRenderPass(data.CommandBuffers[index], &renderPassInfo, SubpassContents.Inline);
 
     // SetViewport
+    // var viewport = new Viewport {
+    //   X = 0.0f,
+    //   Y = data.SwapchainExtent.Height, // flip y axis 
+    //   Width = data.SwapchainExtent.Width,
+    //   Height = -data.SwapchainExtent.Height, // flip y axis
+    //   MinDepth = 0.0f,
+    //   MaxDepth = 1.0f
+    // };
     var viewport = new Viewport {
       X = 0.0f,
-      Y = data.SwapchainExtent.Height, // flip y axis 
+      Y = 0f, // flip y axis 
       Width = data.SwapchainExtent.Width,
-      Height = -data.SwapchainExtent.Height, // flip y axis
+      Height = data.SwapchainExtent.Height,
       MinDepth = 0.0f,
       MaxDepth = 1.0f
     };

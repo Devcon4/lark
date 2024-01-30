@@ -2,7 +2,7 @@ using System.Runtime.CompilerServices;
 using Silk.NET.Core.Native;
 using Silk.NET.Vulkan;
 
-namespace Lark.Engine.Pipeline;
+namespace Lark.Engine.pipeline;
 
 public class SwapchainSupportUtil(LarkVulkanData data) {
 

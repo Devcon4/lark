@@ -5,7 +5,7 @@ using Silk.NET.Maths;
 using Silk.NET.Vulkan;
 using Semaphore = Silk.NET.Vulkan.Semaphore;
 
-namespace Lark.Engine.Pipeline;
+namespace Lark.Engine.pipeline;
 
 public class VulkanBuilder(
     ILogger<VulkanBuilder> logger,
