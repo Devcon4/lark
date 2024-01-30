@@ -12,9 +12,7 @@ public record struct VelocityComponent(Vector3 MoveDelta, Vector3 JumpDelta) : I
 public class JumpSystem(EntityManager em, TimeManager tm, ILogger<JumpSystem> logger) : LarkSystem {
   public override Type[] RequiredComponents => [typeof(VelocityComponent), typeof(JumpComponent)];
 
-  public override Task Init() {
-    return Task.CompletedTask;
-  }
+
 
   public override void Update((Guid, FrozenSet<ILarkComponent>) entity) {
     var (key, components) = entity;

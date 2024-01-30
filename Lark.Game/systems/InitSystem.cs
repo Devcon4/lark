@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Numerics;
 using Lark.Engine;
 using Lark.Engine.ecs;
+using Lark.Engine.physx.systems;
 using Lark.Engine.std;
 using Lark.Game.components;
 using Microsoft.Extensions.Logging;
@@ -13,9 +14,16 @@ using Silk.NET.Input;
 namespace Lark.Game.systems;
 
 public class InitSystem(EntityManager em, TimeManager tm, ActionManager am, InputManager im, ShutdownManager sm, CameraManager cm, LarkWindow window, ILogger<InitSystem> logger) : LarkSystem {
-  public override Type[] RequiredComponents => [typeof(TransformComponent), typeof(VelocityComponent), typeof(CameraComponent)];
+  public override Type[] RequiredComponents => [typeof(TransformComponent), typeof(CameraComponent)];
 
   public Stopwatch sw = new();
+
+  public Action<(Guid, FrozenSet<ILarkComponent>), ILarkInput> KeyDown(LarkKeys key) {
+    return (entity, input) => {
+      var (key, components) = entity;
+      logger.LogInformation("KeyDown :: {key}", key);
+    };
+  }
 
   public Action<(Guid, FrozenSet<ILarkComponent>), ILarkInput> Move(string name, float speed, Vector3 direction) {
     return (enttiy, input) => {
@@ -24,16 +32,23 @@ public class InitSystem(EntityManager em, TimeManager tm, ActionManager am, Inpu
       var (velocity, transform) = components.Get<VelocityComponent, TransformComponent>();
 
       // convert speed to m/s using delta time. A speed of 1 is 1m/s.
-      var normalizedSpeed = speed / 1000f * (float)tm.DeltaTime.TotalMilliseconds;
+      var normalizedSpeed = speed / 10f * (float)tm.DeltaTime.TotalMilliseconds;
 
-      var moveDelta = velocity.MoveDelta + direction * normalizedSpeed;
+      // Calculate relative direction based on camera rotation.
+      var relativeDirection = Vector3.Transform(direction, transform.Rotation);
 
-      var newVelocity = velocity with {
-        MoveDelta = moveDelta
+      var moveDelta = velocity.MoveDelta + relativeDirection * normalizedSpeed;
+
+      var newTransform = transform with {
+        Position = relativeDirection * normalizedSpeed + transform.Position
       };
-      logger.LogInformation("{name} :: {delta} :: {time}", name, newVelocity.MoveDelta, sw.ElapsedMilliseconds);
 
-      em.UpdateEntityComponent(key, newVelocity);
+      // var newVelocity = velocity with {
+      //   MoveDelta = moveDelta
+      // };
+      // logger.LogInformation("{name} :: {delta} :: {time}", name, newVelocity.MoveDelta, sw.ElapsedMilliseconds);
+
+      em.UpdateEntityComponent(key, newTransform);
       sw.Restart();
     };
   }
@@ -79,8 +94,8 @@ public class InitSystem(EntityManager em, TimeManager tm, ActionManager am, Inpu
 
     // Add camera, position camera 15 units away from origin, 10 units above ground
     var cameraTransform = start with {
-      Position = new(0, 0, 0),
-      Rotation = Quaternion.CreateFromYawPitchRoll(0, 0, 0)
+      Position = new(40, -10, 40),
+      Rotation = LarkUtils.CreateFromYawPitchRoll(0, 0, 0),
     };
 
     am.AddActionToMap(ActionManager.DefaultMap, "MoveForward", new LarkKeyTrigger(LarkKeys.W));
@@ -93,19 +108,27 @@ public class InitSystem(EntityManager em, TimeManager tm, ActionManager am, Inpu
 
     var moveSpeed = 1f;
 
-    var moveForwardAction = new ActionComponent("MoveForward", Move("MoveForward", moveSpeed, Vector3.UnitZ));
-    var moveBackwardAction = new ActionComponent("MoveBackward", Move("MoveBackward", moveSpeed, -Vector3.UnitZ));
-    var moveLeftAction = new ActionComponent("MoveLeft", Move("MoveLeft", moveSpeed, Vector3.UnitX));
-    var moveRightAction = new ActionComponent("MoveRight", Move("MoveRight", moveSpeed, -Vector3.UnitX));
+    // var moveForwardAction = new ActionComponent("MoveForward", Move("MoveForward", moveSpeed, Vector3.UnitZ));
+    // var moveBackwardAction = new ActionComponent("MoveBackward", Move("MoveBackward", moveSpeed, -Vector3.UnitZ));
+    // var moveLeftAction = new ActionComponent("MoveLeft", Move("MoveLeft", moveSpeed, Vector3.UnitX));
+    // var moveRightAction = new ActionComponent("MoveRight", Move("MoveRight", moveSpeed, -Vector3.UnitX));
+
+    // var wAction = new ActionComponent("MoveForward", KeyDown(LarkKeys.W));
+    // var sAction = new ActionComponent("MoveBackward", KeyDown(LarkKeys.S));
+    // var aAction = new ActionComponent("MoveLeft", KeyDown(LarkKeys.A));
+    // var dAction = new ActionComponent("MoveRight", KeyDown(LarkKeys.D));
 
     var lookAtAction = new ActionComponent("LookAt", LookAt());
     var exitAction = new ActionComponent("Exit", (entity, input) => sm.Exit());
-    var jumpAction = new ActionComponent("Jump", Jump("Jump", TimeSpan.FromSeconds(1.2f)));
+    var jumpAction = new ActionComponent("Jump", Jump("Jump", TimeSpan.FromSeconds(1.2f))); // 1.2 seconds
 
-    em.AddEntity(new MetadataComponent("Camera-1"), jumpAction, moveForwardAction, moveBackwardAction, moveLeftAction, moveRightAction, exitAction, new VelocityComponent(), new CameraComponent() with { Active = true }, cameraTransform);
+    // em.AddEntity(new MetadataComponent("Camera-1"), new PhysxCapsuleComponent(.05f, .5f, true), jumpAction, moveForwardAction, moveBackwardAction, moveLeftAction, moveRightAction, exitAction, new VelocityComponent(), new CameraComponent() with { Active = true }, cameraTransform);
+    em.AddEntity(new MetadataComponent("Camera-1"), new VelocityComponent(), new CameraComponent() with { Active = true }, cameraTransform,
+    exitAction, jumpAction);
 
-    em.AddEntity(new MeshComponent("antiqueCamera/AntiqueCamera.gltf"), new MetadataComponent("Antique-1"), start with { Position = new(15, 1, 0) });
-    em.AddEntity(new MeshComponent("testPlane/test_plane.glb"), new MetadataComponent("plane-1"), start with { Position = new(0, -5, 0) });
+    // em.AddEntity(new MeshComponent("antiqueCamera/AntiqueCamera.gltf"), new MetadataComponent("Antique-1"), start with { Position = new(15, 1, 0) });
+    em.AddEntity(new MeshComponent("testPlane/test_plane.glb"), new PhysxPlaneComponent(), new MetadataComponent("plane-1"),
+      start with { Position = new(0, 0, 0) });
     return Task.CompletedTask;
   }
 
@@ -113,10 +136,15 @@ public class InitSystem(EntityManager em, TimeManager tm, ActionManager am, Inpu
     // var (key, components) = Entity;
     // var transform = components.Get<TransformComponent>();
 
+    // // Create rotation looking at Vector3.UnitZ.
+
     // var newTransform = transform with {
-    //   Position = new(0, -5, 0),
-    //   Rotation = transform.Rotation * LarkUtils.CreateFromYawPitchRoll(0.0f, 0.0f, 0.0f * (float)tm.DeltaTime.TotalMilliseconds),
+    //   Position = new(40, -10, 40),
+    //   Rotation = LarkUtils.CreateFromYawPitchRoll(0f, 0f, 0f),
+    //   // Rotation = LarkUtils.CreateFromYawPitchRoll(0.0f, 0f, 90f),
     // };
+
+    // // logger.LogInformation("Q :: {rot}", newTransform.Rotation);
 
     // em.UpdateEntityComponent(key, newTransform);
 

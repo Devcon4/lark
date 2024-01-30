@@ -5,7 +5,6 @@ using Microsoft.Extensions.Hosting;
 namespace Lark.Game;
 public class Game(Engine.Engine engine) : IHostedService {
 
-
   public async Task StartAsync(CancellationToken cancellationToken) {
     // By running the engine in a task but not awaiting it, we can return immediately.
     // This allows the host to continue running and not block while keeping the engine responsive.

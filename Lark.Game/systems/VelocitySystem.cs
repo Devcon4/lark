@@ -9,10 +9,6 @@ namespace Lark.Game.systems;
 public class VelocitySystem(EntityManager em, ILogger<VelocitySystem> logger) : LarkSystem {
   public override Type[] RequiredComponents => [typeof(VelocityComponent), typeof(TransformComponent)];
 
-  public override Task Init() {
-    return Task.CompletedTask;
-  }
-
   public override void Update((Guid, FrozenSet<ILarkComponent>) Entity) {
     var (key, components) = Entity;
     var (velocity, transform) = components.Get<VelocityComponent, TransformComponent>();

@@ -15,9 +15,13 @@
     <PackageReference Include="Serilog.Settings.Configuration" Version="7.0.1" />
     <PackageReference Include="Serilog.Sinks.Console" Version="4.1.0" />
     <PackageReference Include="Serilog.Sinks.Seq" Version="5.2.2" />
+    <!-- <PackageReference Include="MagicPhysX" Version="1.0.0">
+      <IncludeAssets>runtime</IncludeAssets>
+    </PackageReference> -->
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Lark.Engine\Lark.Engine.csproj" />
+    <ProjectReference Include="..\..\MagicPhysX\src\MagicPhysX\MagicPhysX.csproj" />
   </ItemGroup>
 
   <Target Name="MakeDir" BeforeTargets="Build">
