@@ -3,18 +3,18 @@ using System.Numerics;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Silk.NET.Core.Native;
 using Silk.NET.GLFW;
 using Silk.NET.Maths;
 
 namespace Lark.Engine;
 
-public class LarkWindow(ILogger<LarkWindow> logger, IHostApplicationLifetime hostLifetime) {
+public class LarkWindow(ILogger<LarkWindow> logger, IHostApplicationLifetime hostLifetime, IOptionsMonitor<GameSettings> gameSettings) {
   private readonly Glfw _glfw = Glfw.GetApi();
   public unsafe WindowHandle* windowHandle = null!;
   public Vector2 ViewportSize => new(FramebufferSize.X, FramebufferSize.Y);
 
-  public Stopwatch sw = new();
   public unsafe void Build() {
     _glfw.Init();
 
@@ -35,6 +35,11 @@ public class LarkWindow(ILogger<LarkWindow> logger, IHostApplicationLifetime hos
     _glfw.SetWindowCloseCallback(windowHandle, (window) => {
       OnClosing();
     });
+  }
+
+  // TODO: check that vulkan follows this.
+  public unsafe void SetVSync(bool vsync) {
+    _glfw.SwapInterval(vsync ? 1 : 0);
   }
 
   // getter that returns the window time.
@@ -59,11 +64,11 @@ public class LarkWindow(ILogger<LarkWindow> logger, IHostApplicationLifetime hos
     return _glfw.VulkanSupported();
   }
 
-  public void DoEvents() {
-    sw.Stop();
-    // logger.LogInformation("Polling events at {time}...", sw.ElapsedMilliseconds);
+  public unsafe void DoEvents() {
+    // Do PollEvents using threadUtils main thread.
+
+    // _glfw.WaitEvents();
     _glfw.PollEvents();
-    sw.Restart();
   }
 
   private unsafe bool ShouldClose() {
@@ -76,19 +81,36 @@ public class LarkWindow(ILogger<LarkWindow> logger, IHostApplicationLifetime hos
     _glfw.Terminate();
   }
 
-  public void Run(Action drawFrame) {
-    logger.LogInformation("Running window...");
-    while (!ShouldClose()) {
-      DoEvents();
-      drawFrame();
-    }
-  }
+  // public void Run(Action drawFrame) {
+  //   logger.LogInformation("Running window...");
+  //   while (!ShouldClose()) {
+  //     DoEvents();
+  //     drawFrame();
+  //   }
+  // }
 
   public async Task Run(Func<Task> drawFrame) {
     logger.LogInformation("Running window...");
+    var frameSW = new Stopwatch();
+    var spinSW = new Stopwatch();
+
+    logger.LogInformation("FPS Limit: {fps}", gameSettings.CurrentValue.FPSLimit);
+
     while (!ShouldClose()) {
+      var targetTime = 1000f / gameSettings.CurrentValue.FPSLimit.GetValueOrDefault(60);
+      frameSW.Restart();
+
       DoEvents();
       await drawFrame();
+
+      double frameTime = frameSW.Elapsed.TotalMilliseconds;
+      if (gameSettings.CurrentValue.FPSLimit.HasValue && frameTime < targetTime) {
+        double sleepTime = targetTime - frameTime;
+
+        // Task.delay is not accurate enough, so we need to use a spin wait.
+        spinSW.Restart();
+        while (spinSW.Elapsed.TotalMilliseconds < sleepTime) { }
+      }
     }
   }
 
@@ -119,6 +141,7 @@ public class LarkWindow(ILogger<LarkWindow> logger, IHostApplicationLifetime hos
 
   public unsafe void SetKeyCallback(Action<Keys, int, InputAction, KeyModifiers> keyCallback) {
     _glfw.SetKeyCallback(windowHandle, (window, key, scancode, action, mods) => {
+      // logger.LogInformation("Key: {key} :: {scancode} :: {action} :: {mods}", key, scancode, action, mods);
       keyCallback(key, scancode, action, mods);
     });
   }

@@ -39,4 +39,24 @@ public static partial class LarkUtils {
 
     return Quaternion.CreateFromRotationMatrix(matrix);
   }
+
+  // For a given direction vector, return the quaternion representing the rotation
+  public static Quaternion Facing(Vector3 direction) {
+    var forward = Vector3.Normalize(direction);
+    var right = Vector3.Normalize(Vector3.Cross(-Vector3.UnitY, forward));
+
+    if (forward == Vector3.UnitY || forward == -Vector3.UnitY) {
+      right = Vector3.UnitX;
+    }
+
+    var up = Vector3.Cross(forward, right);
+
+    var matrix = new Matrix4x4(
+      right.X, right.Y, right.Z, 0,
+      up.X, up.Y, up.Z, 0,
+      forward.X, forward.Y, forward.Z, 0,
+      0, 0, 0, 1
+    );
+    return Quaternion.CreateFromRotationMatrix(matrix);
+  }
 }

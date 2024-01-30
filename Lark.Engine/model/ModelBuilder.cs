@@ -1,5 +1,5 @@
 using System.Numerics;
-using Lark.Engine.Pipeline;
+using Lark.Engine.pipeline;
 using Lark.Engine.std;
 using SharpGLTF.Transforms;
 using Silk.NET.Maths;
@@ -68,8 +68,20 @@ public struct LarkCamera {
     new Vector2(1080, 720)
   );
 
-  public readonly Matrix4x4 View => Matrix4x4.Transform(Matrix4x4.CreateTranslation(Transform.Translation.ToSystem()), Transform.Rotation.ToSystem());
-  public readonly Matrix4x4 Projection => Matrix4x4.CreatePerspectiveFieldOfView(Scalar.DegreesToRadians(Fov), AspectRatio, Near, Far);
+  public readonly Matrix4x4 View {
+    get {
+      var translation = Matrix4x4.CreateTranslation(-Transform.Translation.ToSystem());
+      var rotation = Matrix4x4.Transpose(Matrix4x4.CreateFromQuaternion(Transform.Rotation.ToSystem()));
+      return rotation * translation;
+    }
+  }
+  public readonly Matrix4x4 Projection {
+    get {
+      var proj = Matrix4x4.CreatePerspectiveFieldOfView(Scalar.DegreesToRadians(Fov), AspectRatio, Near, Far);
+      // proj.M22 *= -1;
+      return proj;
+    }
+  }
 
   public readonly Matrix4x4 InvertView {
     get {

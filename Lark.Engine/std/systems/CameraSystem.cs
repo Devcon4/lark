@@ -2,7 +2,7 @@ using System.Collections.Frozen;
 using System.Numerics;
 using Lark.Engine.ecs;
 using Lark.Engine.Model;
-using Lark.Engine.Pipeline;
+using Lark.Engine.pipeline;
 using Silk.NET.Maths;
 
 namespace Lark.Engine.std;
@@ -13,9 +13,7 @@ public class CameraSystem(EntityManager em, LarkVulkanData data) : LarkSystem {
 
   private Dictionary<Guid, LarkCamera> cameraLookup = new();
 
-  public override Task Init() {
-    return Task.CompletedTask;
-  }
+
 
   public override void AfterUpdate() {
     data.cameras = cameraLookup;

@@ -65,8 +65,12 @@ public class EntityManager(ILogger<EntityManager> logger) {
     throw new Exception("No entity found with specified components");
   }
 
-  public ValueTuple<Guid, FrozenSet<ILarkComponent>> GetEntity(Guid key) {
-    return new ValueTuple<Guid, FrozenSet<ILarkComponent>>(key, entities[key].ToFrozenSet());
+  public ValueTuple<Guid, FrozenSet<ILarkComponent>> GetEntity(Guid id) {
+    if (!entities.TryGetValue(id, out var value)) {
+      throw new Exception("Entity does not exist");
+    }
+
+    return new(id, value);
   }
 
   // public FrozenSet<ValueTuple<Guid, FrozenSet<ILarkComponent>>> GetEntitiesWithComponents(params Type[] componentTypes) {
@@ -90,6 +94,16 @@ public class EntityManager(ILogger<EntityManager> logger) {
       }
     }
     await Task.CompletedTask;
+  }
+
+  // GetEntityIdsWithComponents: Get the ids of all entities that have all of the specified components.
+  public IEnumerable<Guid> GetEntityIdsWithComponents(params Type[] componentTypes) {
+    var componentTypeSet = new HashSet<Type>(componentTypes);
+    foreach (var (key, components) in entities) {
+      if (entityComponents[key].IsSupersetOf(componentTypeSet)) {
+        yield return key;
+      }
+    }
   }
 
   public ValueTuple<Guid, FrozenSet<ILarkComponent>> GetEntityWithPredicate(Func<FrozenSet<ILarkComponent>, bool> predicate) {

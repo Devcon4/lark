@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Serilog.Context;
 
 namespace Lark.Engine.std;
 
@@ -16,6 +17,8 @@ public class TimeManager(ILogger<TimeManager> logger) {
   private int FrameCount { get; set; } = 0;
   private int LastSecond { get; set; } = 0;
 
+  private IDisposable frameContext;
+  private IDisposable fpsContext;
 
   public void Update() {
     var now = DateTime.Now;
@@ -26,11 +29,17 @@ public class TimeManager(ILogger<TimeManager> logger) {
     FrameCount++;
     TotalFrames++;
 
+    frameContext?.Dispose();
+    frameContext = LogContext.PushProperty("Frame", FrameCount);
+
     if (FpsTime.TotalSeconds >= 1) {
       FPS = FrameCount;
       FrameCount = 0;
       FpsTime = TimeSpan.Zero;
     }
+
+    fpsContext?.Dispose();
+    fpsContext = LogContext.PushProperty("FPS", FPS);
 
     if (DeltaTime.TotalMilliseconds > HighestFrameTime) {
       HighestFrameTime = (float)DeltaTime.TotalMilliseconds;
@@ -44,7 +53,7 @@ public class TimeManager(ILogger<TimeManager> logger) {
 
     if (TotalTime.Seconds != LastSecond) {
       LastSecond = TotalTime.Seconds;
-      logger.LogInformation("FPS: {fps}, Last: {lastsecond}", FPS, LastSecond);
+      logger.LogInformation("FPS: {fps}, T: {lastsecond}", FPS, TotalTime.ToString(@"mm\:ss"));
     }
 
     logger.LogDebug("{Frame} \t:: Δ {deltaTime}ms \t:: {fps} \t:: High {highest} \t:: Low {low}", TotalFrames, DeltaTime.TotalMilliseconds, FPS, HighestFrameTime, LowestFrameTime);

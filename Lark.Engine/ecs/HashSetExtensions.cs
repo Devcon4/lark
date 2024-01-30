@@ -14,6 +14,19 @@ public static class HashSetExtensions {
     return (TComponent)hashSet.First(c => c.GetType() == typeof(TComponent));
   }
 
+  // TryGet: Get a component of a type, return bool, out TComponent
+  public static bool TryGet<TComponent>(this FrozenSet<ILarkComponent> hashSet, out TComponent component) where TComponent : struct {
+    var result = hashSet.FirstOrDefault(c => c.GetType() == typeof(TComponent));
+    if (result is not null) {
+      component = (TComponent)result;
+      return true;
+    }
+
+    component = default;
+    return false;
+  }
+
+
   public static ValueTuple<TComponent1, TComponent2> Get<TComponent1, TComponent2>(this FrozenSet<ILarkComponent> hashSet) where TComponent1 : struct where TComponent2 : struct {
     return new ValueTuple<TComponent1, TComponent2>(
       (TComponent1)hashSet.First(c => c.GetType() == typeof(TComponent1)),

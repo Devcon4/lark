@@ -1,8 +1,24 @@
 using System.Diagnostics;
 using Lark.Engine.ecs;
 using Microsoft.Extensions.Logging;
+using Silk.NET.OpenGL;
 
 namespace Lark.Engine.std;
+
+public class ActionModule(ActionManager am) : ILarkModule {
+  public Task Cleanup() {
+    return Task.CompletedTask;
+  }
+
+  public Task Init() {
+    return Task.CompletedTask;
+  }
+
+  public async Task Run() {
+    await am.UpdateAsync();
+  }
+}
+
 public class ActionManager(EntityManager em, ILogger<ActionManager> logger) {
   public static Type[] ActionMapEntity => [typeof(SystemComponent), typeof(LarkMapComponent)];
   public static string DefaultMap => "Default";
@@ -70,7 +86,7 @@ public class ActionManager(EntityManager em, ILogger<ActionManager> logger) {
   }
 
   // SwitchActiveMap
-
+  // TODO: this method seems wrong. Check that it actually switches the active map.
   public void SwitchActiveMap(string mapName) {
     var (key, components) = em.GetEntity(typeof(LarkMapComponent));
     var map = components.Get<LarkMapComponent>();
@@ -104,7 +120,7 @@ public class ActionManager(EntityManager em, ILogger<ActionManager> logger) {
 
         if (trigger is null) {
           logger.LogWarning("Action {actionName} does not exist in map {mapName}", action.ActionName, actionMap.MapName);
-          return;
+          continue;
         }
 
         var (id, input) = em.GetEntity(InputManager.InputEntity);

@@ -4,7 +4,7 @@ using System.Collections.Immutable;
 using System.Numerics;
 using Lark.Engine.ecs;
 using Lark.Engine.Model;
-using Lark.Engine.Pipeline;
+using Lark.Engine.pipeline;
 using Microsoft.Extensions.Logging;
 using Silk.NET.Maths;
 

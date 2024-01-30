@@ -1,6 +1,6 @@
 using System.Reflection;
 using SharpGLTF.Schema2;
-using Lark.Engine.Pipeline;
+using Lark.Engine.pipeline;
 using Microsoft.Extensions.Logging;
 using Silk.NET.Maths;
 using Silk.NET.Vulkan;

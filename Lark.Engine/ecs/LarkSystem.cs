@@ -23,10 +23,13 @@ public interface ILarkSystemAfterUpdate {
   public abstract void AfterUpdate();
 }
 
-public interface ILarkSystem : ILarkSystemBeforeUpdate, ILarkSystemAfterUpdate {
+public interface ILarkSystemInit {
+  public abstract Task Init();
+}
+
+public interface ILarkSystem : ILarkSystemBeforeUpdate, ILarkSystemAfterUpdate, ILarkSystemInit {
   public abstract Type[] RequiredComponents { get; }
   public abstract void Update(ValueTuple<Guid, FrozenSet<ILarkComponent>> Entity);
-  public abstract Task Init();
 }
 
 public interface ILarkSyncSystem : ILarkSystem { }
@@ -48,7 +51,7 @@ public abstract class LarkSystem : ILarkSystem, ILarkSyncSystem {
   public abstract void Update(ValueTuple<Guid, FrozenSet<ILarkComponent>> Entity);
 
   // Called once at application start
-  public abstract Task Init();
+  public virtual Task Init() { return Task.CompletedTask; }
 
   // Optional overrides
 

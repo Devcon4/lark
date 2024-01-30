@@ -2,8 +2,9 @@ using System.Collections.Frozen;
 using System.Collections.Immutable;
 using System.Threading.Channels;
 using System.Threading.Tasks.Dataflow;
-using Lark.Engine.Pipeline;
+using Lark.Engine.pipeline;
 using Microsoft.Extensions.Logging;
+using Serilog.Context;
 using Silk.NET.Vulkan;
 
 namespace Lark.Engine.ecs;
@@ -17,18 +18,23 @@ public class SystemManager(
   public async void Init() {
     data.sw.Start();
     foreach (var system in systems) {
-      await system.Init();
+      // If system has an Init method, call it.
+      if (system is ILarkSystemInit initSystem) {
+        await initSystem.Init();
+      }
     }
 
     foreach (var system in syncSystems) {
-      await system.Init();
+      if (system is ILarkSystemInit initSystem) {
+        await initSystem.Init();
+      }
     }
   }
 
   private readonly BoundedChannelOptions options = new(100000) {
     FullMode = BoundedChannelFullMode.Wait,
     SingleReader = true,
-    SingleWriter = false
+    SingleWriter = false,
   };
 
   public async Task Run() {
@@ -62,6 +68,7 @@ public class SystemManager(
       await foreach (var job in reader.ReadAllAsync()) {
         // job.Item1((job.Item2, job.Item3));
         // block.Post(job);
+        using var entityId = LogContext.PushProperty("EntityId", job.Item2);
         job.Item1((job.Item2, job.Item3));
       }
     });

@@ -1,20 +1,46 @@
 using Lark.Engine.ecs;
 using Lark.Engine.Model;
-using Lark.Engine.Pipeline;
+using Lark.Engine.physx.managers;
+using Lark.Engine.physx.systems;
+using Lark.Engine.pipeline;
 using Lark.Engine.std;
 using Lark.Engine.std.systems;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Lark.Engine;
 public static class ServiceConfiguration {
 
-  public static IServiceCollection AddLarkEngine(this IServiceCollection services) {
+  public static IServiceCollection AddLarkPhysx(this IServiceCollection services, IConfiguration configuration) {
+    services.AddSingleton<ILarkModule, PhysxModule>();
+
+    services.Configure<LarkPhysxConfig>(configuration.GetSection("LarkPhysx"));
+
+    services.AddSingleton<PhysxData>();
+    services.AddSingleton<PhysxManager>();
+    services.AddSingleton<ILarkSystem, PhysxWorldSystem>();
+
+    services.AddSingleton<ILarkSystem, PhysxPlaneSystem>();
+    services.AddSingleton<ILarkSystem, PhysxBoxSystem>();
+    services.AddSingleton<ILarkSystem, PhysxCapsuleSystem>();
+    services.AddSingleton<ILarkSystem, PhysxSphereSystem>();
+
+    services.AddSingleton<ILarkSystem, PhysxMaterialSystem>();
+    services.AddSingleton<ILarkSystem, PhysxTransformSystem>();
+    services.AddSingleton<ILarkSystem, PhysxRigidbodySystem>();
+
+    return services;
+  }
+
+  public static IServiceCollection AddLarkEngine(this IServiceCollection services, IConfiguration configuration) {
     services.AddSingleton<Engine>();
     services.AddSingleton<LarkWindow>();
     services.AddSingleton<ShaderBuilder>();
     services.AddSingleton<ModelBuilder>();
 
-    services.AddLarkECS().AddLarkSTD();
+    services.Configure<GameSettings>(configuration.GetSection("GameSettings"));
+
+
     return services;
   }
 
@@ -30,11 +56,14 @@ public static class ServiceConfiguration {
     services.AddSingleton<ShutdownManager>();
     services.AddSingleton<CameraManager>();
 
+    services.AddSingleton<ILarkModule, ActionModule>();
+
     return services;
   }
 
   // AddECSServices
   public static IServiceCollection AddLarkECS(this IServiceCollection services) {
+    services.AddSingleton<ILarkModule, EcsModule>();
     services.AddSingleton<EntityManager>();
     services.AddSingleton<SystemManager>();
 
@@ -42,6 +71,8 @@ public static class ServiceConfiguration {
   }
 
   public static IServiceCollection AddVulkanPipeline(this IServiceCollection services) {
+    services.AddSingleton<ILarkModule, VulkanModule>();
+
     services.AddSingleton<LarkVulkanData>();
     services.AddSingleton<QueueFamilyUtil>();
     services.AddSingleton<BufferUtils>();

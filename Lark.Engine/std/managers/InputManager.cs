@@ -36,7 +36,7 @@ public class InputManager(ILogger<InputManager> logger, LarkWindow window, Entit
     };
 
     em.UpdateEntityComponent(id, newInput);
-    // am.UpdateAsync().Wait();
+    am.UpdateAsync().Wait();
   }
 
   public void MouseButtonCallbackAction(MouseButton button, InputAction action, KeyModifiers mods) {
