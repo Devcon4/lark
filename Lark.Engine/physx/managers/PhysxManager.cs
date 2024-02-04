@@ -383,6 +383,16 @@ public class PhysxManager(ILogger<PhysxManager> logger, EntityManager em, TimeMa
 
   public unsafe void Cleanup() {
     logger.LogInformation("Physx :: Disposing");
+
+    foreach (var actor in ActorLookup.Values) {
+      PxRigidActor_release_mut((PxRigidActor*)actor.Actor);
+    }
+
+    if (physxData.PVD != null) {
+      physxData.PVD->DisconnectMut();
+      physxData.PVD->ReleaseMut();
+    }
+
     physxData.Materials.Clear();
     PxScene_release_mut(physxData.Scene);
     PxDefaultCpuDispatcher_release_mut(physxData.Dispatcher);

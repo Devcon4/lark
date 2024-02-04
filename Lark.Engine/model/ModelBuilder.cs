@@ -221,12 +221,6 @@ public class LarkModel {
   public unsafe void Dispose(LarkVulkanData data) {
     data.vk.DestroyDescriptorPool(data.Device, DescriptorPool, null);
 
-    data.vk.DestroyBuffer(data.Device, Vertices.Buffer, null);
-    data.vk.FreeMemory(data.Device, Vertices.Memory, null);
-
-    data.vk.DestroyBuffer(data.Device, Indices.Buffer, null);
-    data.vk.FreeMemory(data.Device, Indices.Memory, null);
-
     Vertices.Dispose(data);
     Indices.Dispose(data);
 

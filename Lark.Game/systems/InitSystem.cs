@@ -18,18 +18,30 @@ public class InitSystem(EntityManager em, TimeManager tm, ActionManager am, Inpu
 
   public Stopwatch sw = new();
 
-  public Action<(Guid, FrozenSet<ILarkComponent>), ILarkInput> KeyDown(LarkKeys key) {
-    return (entity, input) => {
+  public Action<(Guid, FrozenSet<ILarkComponent>), FrozenSet<ILarkInput>> KeyDown(LarkKeys key) {
+    return (entity, events) => {
       var (key, components) = entity;
-      logger.LogInformation("KeyDown :: {key}", key);
+
+      if (LarkUtils.AnyKeyPressed(events)) {
+        logger.LogInformation("KeyDown :: {key}", key);
+      }
+
+      if (LarkUtils.AnyKeyReleased(events)) {
+        logger.LogInformation("KeyUp :: {key}", key);
+      }
+
     };
   }
 
-  public Action<(Guid, FrozenSet<ILarkComponent>), ILarkInput> Move(string name, float speed, Vector3 direction) {
-    return (enttiy, input) => {
+  public Action<(Guid, FrozenSet<ILarkComponent>), FrozenSet<ILarkInput>> Move(string name, float speed, Vector3 direction) {
+    return (entity, events) => {
+      logger.LogInformation("Move :: {name}", name);
       sw.Stop();
-      var (key, components) = enttiy;
+      var (key, components) = entity;
       var (velocity, transform) = components.Get<VelocityComponent, TransformComponent>();
+
+      // If events doesn't have a pressed event for the key, return.
+      // if (!LarkUtils.AnyKeyPressed(events)) return;
 
       // convert speed to m/s using delta time. A speed of 1 is 1m/s.
       var normalizedSpeed = speed / 10f * (float)tm.DeltaTime.TotalMilliseconds;
@@ -40,7 +52,7 @@ public class InitSystem(EntityManager em, TimeManager tm, ActionManager am, Inpu
       var moveDelta = velocity.MoveDelta + relativeDirection * normalizedSpeed;
 
       var newTransform = transform with {
-        Position = relativeDirection * normalizedSpeed + transform.Position
+        Position = direction * normalizedSpeed + transform.Position
       };
 
       // var newVelocity = velocity with {
@@ -53,9 +65,11 @@ public class InitSystem(EntityManager em, TimeManager tm, ActionManager am, Inpu
     };
   }
 
-  public Action<(Guid, FrozenSet<ILarkComponent>), ILarkInput> Jump(string name, TimeSpan jumpDuration) {
-    return (entity, input) => {
+  public Action<(Guid, FrozenSet<ILarkComponent>), FrozenSet<ILarkInput>> Jump(string name, TimeSpan jumpDuration) {
+    return (entity, events) => {
       var (key, components) = entity;
+
+
       logger.LogInformation("Jump :: Triggered :: {duration} :: {key}", jumpDuration, key);
 
       var (transform, velocity) = components.Get<TransformComponent, VelocityComponent>();
@@ -67,10 +81,13 @@ public class InitSystem(EntityManager em, TimeManager tm, ActionManager am, Inpu
     };
   }
 
-  public Action<(Guid, FrozenSet<ILarkComponent>), ILarkInput> LookAt(float sensitivity = 1f) {
+  public Action<(Guid, FrozenSet<ILarkComponent>), FrozenSet<ILarkInput>> LookAt(float sensitivity = 1f) {
     var LastPos = Vector2.Zero;
-    return (enttiy, input) => {
-      if (input is not ILarkCursorInput cursor) return;
+    return (enttiy, events) => {
+
+      if (!LarkUtils.AnyKeyPressed(events)) return;
+      if (!LarkUtils.AnyEvent<ILarkCursorInput>(events, out var cursor)) return;
+
       if (cursor.Position == LastPos) return;
       LastPos = cursor.Position;
       var (key, components) = enttiy;
@@ -108,26 +125,30 @@ public class InitSystem(EntityManager em, TimeManager tm, ActionManager am, Inpu
 
     var moveSpeed = 1f;
 
-    // var moveForwardAction = new ActionComponent("MoveForward", Move("MoveForward", moveSpeed, Vector3.UnitZ));
-    // var moveBackwardAction = new ActionComponent("MoveBackward", Move("MoveBackward", moveSpeed, -Vector3.UnitZ));
-    // var moveLeftAction = new ActionComponent("MoveLeft", Move("MoveLeft", moveSpeed, Vector3.UnitX));
-    // var moveRightAction = new ActionComponent("MoveRight", Move("MoveRight", moveSpeed, -Vector3.UnitX));
+    var moveForwardAction = new ActionComponent("MoveForward", Move("MoveForward", moveSpeed, Vector3.UnitZ));
+    var moveBackwardAction = new ActionComponent("MoveBackward", Move("MoveBackward", moveSpeed, -Vector3.UnitZ));
+    var moveLeftAction = new ActionComponent("MoveLeft", Move("MoveLeft", moveSpeed, Vector3.UnitX));
+    var moveRightAction = new ActionComponent("MoveRight", Move("MoveRight", moveSpeed, -Vector3.UnitX));
 
-    // var wAction = new ActionComponent("MoveForward", KeyDown(LarkKeys.W));
-    // var sAction = new ActionComponent("MoveBackward", KeyDown(LarkKeys.S));
-    // var aAction = new ActionComponent("MoveLeft", KeyDown(LarkKeys.A));
-    // var dAction = new ActionComponent("MoveRight", KeyDown(LarkKeys.D));
+    var wAction = new ActionComponent("MoveForward", KeyDown(LarkKeys.W));
+    var sAction = new ActionComponent("MoveBackward", KeyDown(LarkKeys.S));
+    var aAction = new ActionComponent("MoveLeft", KeyDown(LarkKeys.A));
+    var dAction = new ActionComponent("MoveRight", KeyDown(LarkKeys.D));
 
     var lookAtAction = new ActionComponent("LookAt", LookAt());
     var exitAction = new ActionComponent("Exit", (entity, input) => sm.Exit());
     var jumpAction = new ActionComponent("Jump", Jump("Jump", TimeSpan.FromSeconds(1.2f))); // 1.2 seconds
 
+
     // em.AddEntity(new MetadataComponent("Camera-1"), new PhysxCapsuleComponent(.05f, .5f, true), jumpAction, moveForwardAction, moveBackwardAction, moveLeftAction, moveRightAction, exitAction, new VelocityComponent(), new CameraComponent() with { Active = true }, cameraTransform);
     em.AddEntity(new MetadataComponent("Camera-1"), new VelocityComponent(), new CameraComponent() with { Active = true }, cameraTransform,
-    exitAction, jumpAction);
+    exitAction, jumpAction,
+    moveForwardAction, moveBackwardAction, moveLeftAction, moveRightAction
+    // wAction, sAction, aAction, dAction
+    );
 
     // em.AddEntity(new MeshComponent("antiqueCamera/AntiqueCamera.gltf"), new MetadataComponent("Antique-1"), start with { Position = new(15, 1, 0) });
-    em.AddEntity(new MeshComponent("testPlane/test_plane.glb"), new PhysxPlaneComponent(), new MetadataComponent("plane-1"),
+    em.AddEntity(new MeshComponent("testPlane/test_plane.glb"), new MetadataComponent("plane-1"),
       start with { Position = new(0, 0, 0) });
     return Task.CompletedTask;
   }

@@ -77,7 +77,10 @@ public class VulkanBuilder(
   }
 
   public unsafe void Cleanup() {
-    logger.LogInformation("Disposing Vulkan...");
+    logger.LogInformation("Disposing Vulkan... {thread}", Environment.CurrentManagedThreadId);
+
+    // wait for each in-flight frame to finish
+    data.vk.DeviceWaitIdle(data.Device);
 
     foreach (var (_, model) in data.models) {
       model.Dispose(data);
@@ -91,6 +94,9 @@ public class VulkanBuilder(
 
     data.vk.DestroyImage(data.Device, data.TextureImage, null);
     data.vk.FreeMemory(data.Device, data.TextureImageMemory, null);
+
+    data.vk.DestroyDescriptorSetLayout(data.Device, data.Layouts.matricies, null);
+    data.vk.DestroyDescriptorSetLayout(data.Device, data.Layouts.textures, null);
 
     // Destroy descriptor set layout
     // data.vk.DestroyDescriptorSetLayout(data.Device, data.DescriptorSetLayout, null);
@@ -107,6 +113,7 @@ public class VulkanBuilder(
       data.vk.DestroyFence(data.Device, data.InFlightFences[i], null);
     }
 
+    data.vk.DestroyFence(data.Device, data.CommandFence, null);
     data.vk.DestroyCommandPool(data.Device, data.CommandPool, null);
 
     data.vk.DestroyDevice(data.Device, null);

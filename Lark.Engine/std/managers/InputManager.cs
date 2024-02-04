@@ -21,32 +21,28 @@ public class InputManager(ILogger<InputManager> logger, LarkWindow window, Entit
   public void KeyCallbackAction(Keys key, int scancode, InputAction action, KeyModifiers mods) {
     var (id, components) = em.GetEntity(typeof(SystemComponent), typeof(CurrentKeysInputComponent));
     var pressedKeyInput = components.Get<CurrentKeysInputComponent>();
-    List<PressedKey> pressedKeys = pressedKeyInput.Keys.ToList();
+    List<LarkKeyEvent> keyEvents = pressedKeyInput.Events.ToList();
 
-    if (action == InputAction.Release) {
-      pressedKeys.RemoveAll(k => k.Key == (LarkKeys)key);
-    }
-
-    if (action == InputAction.Press) {
-      pressedKeys.Add(new PressedKey((LarkKeys)key, (LarkKeyModifiers)mods));
-    }
+    keyEvents.Add(new LarkKeyEvent((LarkKeys)key, (LarkInputAction)action, (LarkKeyModifiers)mods));
 
     var newInput = new CurrentKeysInputComponent() with {
-      Keys = pressedKeys.ToFrozenSet()
+      Events = keyEvents.ToFrozenSet()
     };
 
     em.UpdateEntityComponent(id, newInput);
-    am.UpdateAsync().Wait();
+    // am.UpdateAsync().Wait();
   }
 
   public void MouseButtonCallbackAction(MouseButton button, InputAction action, KeyModifiers mods) {
     var (id, components) = em.GetEntity(typeof(SystemComponent), typeof(CurrentMouseInputComponent));
     var currentInput = components.Get<CurrentMouseInputComponent>();
 
+    var mouseEvents = currentInput.Events.ToList();
+
+    mouseEvents.Add(new LarkMouseEvent((LarkMouseButton)button, (LarkInputAction)action, (LarkKeyModifiers)mods));
+
     var newInput = currentInput with {
-      Button = (LarkMouseButton)button,
-      Action = (LarkInputAction)action,
-      Mods = (LarkKeyModifiers)mods,
+      Events = mouseEvents.ToFrozenSet()
     };
 
     em.UpdateEntityComponent(id, newInput);
@@ -57,8 +53,11 @@ public class InputManager(ILogger<InputManager> logger, LarkWindow window, Entit
     var (id, components) = em.GetEntity(typeof(SystemComponent), typeof(CurrentCursorInputComponent));
     var currentInput = components.Get<CurrentCursorInputComponent>();
 
+    var cursorEvents = currentInput.Events.ToList();
+    cursorEvents.Add(new LarkCursorEvent(position));
+
     var newInput = currentInput with {
-      Position = position,
+      Events = cursorEvents.ToFrozenSet()
     };
 
     em.UpdateEntityComponent(id, newInput);
@@ -69,8 +68,11 @@ public class InputManager(ILogger<InputManager> logger, LarkWindow window, Entit
     var (id, components) = em.GetEntity(typeof(SystemComponent), typeof(CurrentScrollInputComponent));
     var currentInput = components.Get<CurrentScrollInputComponent>();
 
+    var scrollEvents = currentInput.Events.ToList();
+    scrollEvents.Add(new LarkScrollEvent(offset));
+
     var newInput = currentInput with {
-      Offset = offset,
+      Events = scrollEvents.ToFrozenSet()
     };
 
     em.UpdateEntityComponent(id, newInput);
@@ -103,7 +105,12 @@ public enum LarkInputAction {
   //
   // Summary:
   //     The key was held down until it repeated.
-  Repeat = 2
+  Repeat = 2,
+
+  // CUSTOM: This is not part of the GLFW spec.
+  // Repeat is not acurate enough for our use case.
+  // Hold means a press event occured but a release event has not occured.
+  Hold = 3
 }
 
 public enum LarkKeyModifiers {

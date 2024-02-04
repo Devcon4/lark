@@ -78,7 +78,7 @@ public class GraphicsPipelineSegment(LarkVulkanData data, ShaderBuilder shaderBu
         PolygonMode = PolygonMode.Fill,
         LineWidth = 1f,
         CullMode = CullModeFlags.BackBit,
-        FrontFace = FrontFace.CounterClockwise,
+        FrontFace = FrontFace.Clockwise,
         DepthBiasEnable = Vk.False
       };
 

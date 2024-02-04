@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using System.Diagnostics;
 using Lark.Engine.ecs;
 using Microsoft.Extensions.Logging;
@@ -124,24 +125,32 @@ public class ActionManager(EntityManager em, ILogger<ActionManager> logger) {
         }
 
         var (id, input) = em.GetEntity(InputManager.InputEntity);
-        var (keyInputs, mouseInput, cursorInput, scrollInput) = input.Get<CurrentKeysInputComponent, CurrentMouseInputComponent, CurrentCursorInputComponent, CurrentScrollInputComponent>();
+        var (keyInputs, mouseInputs, cursorInputs, scrollInputs) = input.Get<CurrentKeysInputComponent, CurrentMouseInputComponent, CurrentCursorInputComponent, CurrentScrollInputComponent>();
 
-        foreach (var keyInput in keyInputs.Keys) {
-          if (trigger.Check(keyInput)) {
-            action.Callback(entity, keyInput);
-          }
+        // If there are any events log them.
+        if (keyInputs.Events.Any() || mouseInputs.Events.Any() || cursorInputs.Events.Any() || scrollInputs.Events.Any()) {
+          logger.LogInformation("Events :: {events}", [.. keyInputs.Events, .. mouseInputs.Events, .. cursorInputs.Events, .. scrollInputs.Events]);
         }
 
-        if (trigger.Check(mouseInput)) {
-          action.Callback(entity, mouseInput);
+        //TODO: Don't love all these Where calls, look at optimizing this.
+        var triggeredKeyEvents = keyInputs.Events.Where(k => trigger.Check(k)).Cast<ILarkInput>();
+        if (triggeredKeyEvents.Any()) {
+          action.Callback(entity, triggeredKeyEvents.ToFrozenSet());
         }
 
-        if (trigger.Check(cursorInput)) {
-          action.Callback(entity, cursorInput);
+        var triggeredMouseEvents = mouseInputs.Events.Where(k => trigger.Check(k)).Cast<ILarkInput>();
+        if (triggeredMouseEvents.Any()) {
+          action.Callback(entity, triggeredMouseEvents.ToFrozenSet());
         }
 
-        if (trigger.Check(scrollInput)) {
-          action.Callback(entity, scrollInput);
+        var triggeredCursorEvents = cursorInputs.Events.Where(k => trigger.Check(k)).Cast<ILarkInput>();
+        if (triggeredCursorEvents.Any()) {
+          action.Callback(entity, triggeredCursorEvents.ToFrozenSet());
+        }
+
+        var triggeredScrollEvents = scrollInputs.Events.Where(k => trigger.Check(k)).Cast<ILarkInput>();
+        if (triggeredScrollEvents.Any()) {
+          action.Callback(entity, triggeredScrollEvents.ToFrozenSet());
         }
       }
     }

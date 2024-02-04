@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using System.Numerics;
+using System.Reflection.Metadata;
 using System.Runtime.InteropServices;
+using Lark.Engine.std;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -10,12 +12,14 @@ using Silk.NET.Maths;
 
 namespace Lark.Engine;
 
-public class LarkWindow(ILogger<LarkWindow> logger, IHostApplicationLifetime hostLifetime, IOptionsMonitor<GameSettings> gameSettings) {
+public class LarkWindow(ILogger<LarkWindow> logger, ShutdownManager shutdownManager) {
   private readonly Glfw _glfw = Glfw.GetApi();
   public unsafe WindowHandle* windowHandle = null!;
   public Vector2 ViewportSize => new(FramebufferSize.X, FramebufferSize.Y);
+  public unsafe bool IsFocused => _glfw.GetWindowAttrib(windowHandle, WindowAttributeGetter.Focused);
 
   public unsafe void Build() {
+    logger.LogInformation("Building window... {thread}", Environment.CurrentManagedThreadId);
     _glfw.Init();
 
     // Set error callback.
@@ -32,6 +36,8 @@ public class LarkWindow(ILogger<LarkWindow> logger, IHostApplicationLifetime hos
       throw new Exception("Failed to create GLFW window");
     }
 
+    _glfw.FocusWindow(windowHandle);
+
     _glfw.SetWindowCloseCallback(windowHandle, (window) => {
       OnClosing();
     });
@@ -47,7 +53,7 @@ public class LarkWindow(ILogger<LarkWindow> logger, IHostApplicationLifetime hos
 
   private void OnClosing() {
     // Need to shutdown the host when the window closes.
-    hostLifetime.StopApplication();
+    shutdownManager.Exit();
   }
 
   public unsafe void CreateVkSurface(VkHandle instance, out VkNonDispatchableHandle surface) {
@@ -71,7 +77,7 @@ public class LarkWindow(ILogger<LarkWindow> logger, IHostApplicationLifetime hos
     _glfw.PollEvents();
   }
 
-  private unsafe bool ShouldClose() {
+  public unsafe bool ShouldClose() {
     return _glfw.WindowShouldClose(windowHandle);
   }
 
@@ -89,29 +95,8 @@ public class LarkWindow(ILogger<LarkWindow> logger, IHostApplicationLifetime hos
   //   }
   // }
 
-  public async Task Run(Func<Task> drawFrame) {
-    logger.LogInformation("Running window...");
-    var frameSW = new Stopwatch();
-    var spinSW = new Stopwatch();
-
-    logger.LogInformation("FPS Limit: {fps}", gameSettings.CurrentValue.FPSLimit);
-
-    while (!ShouldClose()) {
-      var targetTime = 1000f / gameSettings.CurrentValue.FPSLimit.GetValueOrDefault(60);
-      frameSW.Restart();
-
-      DoEvents();
-      await drawFrame();
-
-      double frameTime = frameSW.Elapsed.TotalMilliseconds;
-      if (gameSettings.CurrentValue.FPSLimit.HasValue && frameTime < targetTime) {
-        double sleepTime = targetTime - frameTime;
-
-        // Task.delay is not accurate enough, so we need to use a spin wait.
-        spinSW.Restart();
-        while (spinSW.Elapsed.TotalMilliseconds < sleepTime) { }
-      }
-    }
+  public unsafe void LogWindow() {
+    logger.LogInformation("WindowHandle: {windowHandle}", (IntPtr)windowHandle);
   }
 
   public unsafe void SetFramebufferResize(Action<Vector2D<int>> framebufferResize) {
