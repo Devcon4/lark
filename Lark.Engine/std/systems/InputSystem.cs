@@ -60,11 +60,12 @@ public class InputSystem(EntityManager em, InputManager im, LarkWindow window, I
 
     }
 
+    // TODO: This is not working as expected. Need to fix.
+
     // If the window is not focused, clear all events. Send a release event for all held keys.
-    if (!window.IsFocused) {
-      logger.LogInformation("Window is not focused, clearing all events.");
-      newEvents = newEvents.Select(e => e with { Action = LarkInputAction.Release }).ToList();
-    }
+    // if (!window.IsFocused) {
+    //   newEvents = newEvents.Select(e => e with { Action = LarkInputAction.Release }).ToList();
+    // }
 
     em.UpdateEntityComponent(key, new CurrentKeysInputComponent() with { Events = newEvents.ToFrozenSet() });
 

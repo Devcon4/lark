@@ -144,24 +144,26 @@ public class PhysxManager(ILogger<PhysxManager> logger, EntityManager em, TimeMa
     physxData.Materials.Add(materialId, new(material));
   }
 
-  public unsafe Guid RegisterPlane(Vector3 point, Vector3 normal, Guid materialId) {
-    // Plane is static by default
+  public unsafe Guid RegisterPlane(Vector3 position, Vector3 normal, Guid materialId) {
     logger.LogInformation("Physx :: Registering plane");
-    var p = new PxVec3 { x = point.X, y = point.Y, z = point.Z };
+    var p = new PxVec3 { x = position.X, y = position.Y, z = position.Z };
     var n = new PxVec3 { x = normal.X, y = normal.Y, z = normal.Z };
-    // var plane = PxPlane_new_4(&p1, &p2, &p3);
+
     var plane = PxPlane_new_3(&p, &n);
-    var transform = PxTransform_new_1(&p);
+    var transform = phys_PxTransformFromPlaneEquation(&plane);
     var identity = PxTransform_new_2(PxIDENTITY.PxIdentity);
 
     if (!physxData.Materials.TryGetValue(materialId, out var material)) {
       material = physxData.Materials[DefaultMaterialId];
     }
 
-    // var physicsObject = (PxActor*)physxData.Physics->PhysPxCreateStatic(&transform, (PxGeometry*)&plane, material.Material, &identity);
-    var physicsObject = physxData.Physics->PhysPxCreatePlane(&plane, material.Material);
+    // plane has no geometry, all needed is the transform. Create empty geometry.
+    var geo = PxPlaneGeometry_new();
 
-    var larkActor = new LarkPhysxActor((PxActor*)physicsObject);
+    PxActor* physicsObject;
+    physicsObject = (PxActor*)physxData.Physics->PhysPxCreateStatic(&transform, (PxGeometry*)&geo, material.Material, &identity);
+
+    var larkActor = new LarkPhysxActor(physicsObject);
     physxData.Scene->AddActorMut(larkActor.Actor, null);
 
     var guid = Guid.NewGuid();
@@ -169,7 +171,35 @@ public class PhysxManager(ILogger<PhysxManager> logger, EntityManager em, TimeMa
     return guid;
   }
 
-  // Todo: Update plane position
+  // GetPlaneRotation: Returns the rotation transformed from the plane equation
+  public unsafe Quaternion GetPlaneRotation(Guid actorId) {
+    if (!ActorLookup.TryGetValue(actorId, out var actor)) {
+      throw new Exception($"Actor {actorId} does not exist");
+    }
+
+    var transform = PxRigidActor_getGlobalPose((PxRigidActor*)actor.Actor);
+    var plane = phys_PxPlaneEquationFromTransform(&transform);
+
+    var normal = new Vector3(plane.n.x, plane.n.y, plane.n.z);
+    var rot = LarkUtils.RotationFromNormal(normal);
+    return rot;
+  }
+
+  // GetCapsuleRotation: Returns the rotation transformed from the capsule orientation
+  public unsafe Quaternion GetCapsuleRotation(Guid actorId) {
+    if (!ActorLookup.TryGetValue(actorId, out var actor)) {
+      throw new Exception($"Actor {actorId} does not exist");
+    }
+
+    var transform = PxRigidActor_getGlobalPose((PxRigidActor*)actor.Actor);
+
+    // Capsule orientation is along the y axis, so we need to rotate the transform component to match.
+    var rot = new Quaternion(transform.q.x, transform.q.y, transform.q.z, transform.q.w);
+    rot *= Quaternion.CreateFromAxisAngle(-Vector3.UnitZ, MathF.PI / 2);
+
+
+    return rot;
+  }
 
   public unsafe Guid RegisterBox(Vector3 position, Quaternion rotation, Vector3 size, bool isStatic, Guid materialId) {
     logger.LogInformation("Physx :: Registering box");
@@ -227,11 +257,11 @@ public class PhysxManager(ILogger<PhysxManager> logger, EntityManager em, TimeMa
     return guid;
   }
 
-  public unsafe Guid RegisterCapsule(Vector3 position, Quaternion rotation, float radius, float halfHeight, bool isStatic, Guid materialId) {
+  public unsafe Guid RegisterCapsule(Vector3 position, Quaternion rotation, float radius, float height, bool isStatic, Guid materialId) {
     logger.LogInformation("Physx :: Registering capsule");
     var p = new PxVec3 { x = position.X, y = position.Y, z = position.Z };
     var q = new PxQuat { x = rotation.X, y = rotation.Y, z = rotation.Z, w = rotation.W };
-    var capsule = PxCapsuleGeometry_new(radius, halfHeight);
+    var capsule = PxCapsuleGeometry_new(radius, height / 2);
     var transform = PxTransform_new_5(&p, &q);
     var identity = PxTransform_new_2(PxIDENTITY.PxIdentity);
 

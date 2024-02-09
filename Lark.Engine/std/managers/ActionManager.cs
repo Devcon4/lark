@@ -128,9 +128,9 @@ public class ActionManager(EntityManager em, ILogger<ActionManager> logger) {
         var (keyInputs, mouseInputs, cursorInputs, scrollInputs) = input.Get<CurrentKeysInputComponent, CurrentMouseInputComponent, CurrentCursorInputComponent, CurrentScrollInputComponent>();
 
         // If there are any events log them.
-        if (keyInputs.Events.Any() || mouseInputs.Events.Any() || cursorInputs.Events.Any() || scrollInputs.Events.Any()) {
-          logger.LogInformation("Events :: {events}", [.. keyInputs.Events, .. mouseInputs.Events, .. cursorInputs.Events, .. scrollInputs.Events]);
-        }
+        // if (keyInputs.Events.Any() || mouseInputs.Events.Any() || cursorInputs.Events.Any() || scrollInputs.Events.Any()) {
+        //   logger.LogInformation("Events :: {events}", [.. keyInputs.Events, .. mouseInputs.Events, .. cursorInputs.Events, .. scrollInputs.Events]);
+        // }
 
         //TODO: Don't love all these Where calls, look at optimizing this.
         var triggeredKeyEvents = keyInputs.Events.Where(k => trigger.Check(k)).Cast<ILarkInput>();

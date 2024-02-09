@@ -59,4 +59,21 @@ public static partial class LarkUtils {
     );
     return Quaternion.CreateFromRotationMatrix(matrix);
   }
+
+  public static Quaternion RotationFromNormal(Vector3 normal) {
+    // Create an orthonormal basis from the normal
+    Vector3 up = -Vector3.UnitY;
+    Vector3 right = Vector3.Normalize(Vector3.Cross(up, normal));
+    up = Vector3.Cross(normal, right);
+
+    // Create a rotation matrix from the orthonormal basis
+    Matrix4x4 matrix = new Matrix4x4(
+      right.X, right.Y, right.Z, 0,
+      up.X, up.Y, up.Z, 0,
+      normal.X, normal.Y, normal.Z, 0,
+      0, 0, 0, 1);
+
+    // Convert the rotation matrix to a quaternion
+    return Quaternion.CreateFromRotationMatrix(matrix);
+  }
 }

@@ -40,9 +40,6 @@ public class InitSystem(EntityManager em, TimeManager tm, ActionManager am, Inpu
       var (key, components) = entity;
       var (velocity, transform) = components.Get<VelocityComponent, TransformComponent>();
 
-      // If events doesn't have a pressed event for the key, return.
-      // if (!LarkUtils.AnyKeyPressed(events)) return;
-
       // convert speed to m/s using delta time. A speed of 1 is 1m/s.
       var normalizedSpeed = speed / 10f * (float)tm.DeltaTime.TotalMilliseconds;
 
@@ -123,7 +120,7 @@ public class InitSystem(EntityManager em, TimeManager tm, ActionManager am, Inpu
     am.AddActionToMap(ActionManager.DefaultMap, "Exit", new LarkKeyTrigger(LarkKeys.Escape));
     am.AddActionToMap(ActionManager.DefaultMap, "Jump", new LarkKeyTrigger(LarkKeys.Space));
 
-    var moveSpeed = 1f;
+    var moveSpeed = 0.1f;
 
     var moveForwardAction = new ActionComponent("MoveForward", Move("MoveForward", moveSpeed, Vector3.UnitZ));
     var moveBackwardAction = new ActionComponent("MoveBackward", Move("MoveBackward", moveSpeed, -Vector3.UnitZ));
@@ -149,7 +146,8 @@ public class InitSystem(EntityManager em, TimeManager tm, ActionManager am, Inpu
 
     // em.AddEntity(new MeshComponent("antiqueCamera/AntiqueCamera.gltf"), new MetadataComponent("Antique-1"), start with { Position = new(15, 1, 0) });
     em.AddEntity(new MeshComponent("testPlane/test_plane.glb"), new MetadataComponent("plane-1"),
-      start with { Position = new(0, 0, 0) });
+      new PhysxPlaneComponent(),
+      start with { Position = new(0, 0, 0), Rotation = LarkUtils.CreateFromYawPitchRoll(0, 0, 0) });
     return Task.CompletedTask;
   }
 

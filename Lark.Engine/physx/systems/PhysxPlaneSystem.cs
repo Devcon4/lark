@@ -28,7 +28,8 @@ public class PhysxPlaneSystem(EntityManager em, PhysxManager pm, ILogger<PhysxPl
     // If the actor has not been created yet, create it.
     if (!pm.HasActor(id)) {
       // Calc up normal vector of the plane based on the rotation of the transform component.
-      var normal = Vector3.Transform(new Vector3(0, -1, 0), transform.Rotation);
+      var up = -Vector3.UnitY;
+      var normal = Vector3.Transform(up, transform.Rotation);
       logger.LogInformation("PhysxPlaneSystem :: pos {pos} :: normal {normal}", transform.Position, normal);
 
       var actorId = pm.RegisterPlane(transform.Position, normal, id);

@@ -18,7 +18,19 @@ public class PhysxTransformSystem(EntityManager em, PhysxManager pm) : LarkSyste
       return;
     }
 
-    var (pos, rot) = pm.GetActorTransform(pm.GetActorId(id));
+    var actorId = pm.GetActorId(id);
+
+    var (pos, rot) = pm.GetActorTransform(actorId);
+
+    // If the entity has a physxPlaneComponent, adjust rotation from physx to match engine space.
+    if (components.Has<PhysxPlaneComponent>()) {
+      rot = pm.GetPlaneRotation(actorId);
+    }
+
+    // If the entity has a physxCapsuleComponent, adjust rotation from physx to match engine space.
+    if (components.Has<PhysxCapsuleComponent>()) {
+      rot = pm.GetCapsuleRotation(actorId);
+    }
 
     var newTransform = transform with {
       Position = pos,

@@ -1,4 +1,5 @@
 using System.Collections.Frozen;
+using System.Numerics;
 using Lark.Engine.ecs;
 using Lark.Engine.physx.components;
 using Lark.Engine.physx.managers;
@@ -24,7 +25,11 @@ public class PhysxCapsuleSystem(PhysxManager pm, EntityManager em) : LarkSystem 
 
     // If the actor has not been created yet, create it.
     if (!pm.HasActor(id)) {
-      var actorId = pm.RegisterCapsule(transform.Position, transform.Rotation, capsuleComponent.Radius, capsuleComponent.Height, capsuleComponent.IsStatic, id);
+
+      // physx capsules are oriented along the y axis, so we need to rotate the transform component to match.
+      var actorRotation = transform.Rotation * Quaternion.CreateFromAxisAngle(Vector3.UnitZ, MathF.PI / 2);
+
+      var actorId = pm.RegisterCapsule(transform.Position, actorRotation, capsuleComponent.Radius, capsuleComponent.Height, capsuleComponent.IsStatic, id);
       pm.SetActorId(id, actorId);
     }
   }

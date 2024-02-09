@@ -15,11 +15,13 @@ public class PhysxInitSystem(EntityManager em, PhysxManager pm, ILogger<PhysxIni
   public override Type[] RequiredComponents => [typeof(PhysxRigidbodyComponent)];
 
   private ILarkComponent[] GetCube(Vector3 pos, string name) => [
-    new MeshComponent("cube/cube.glb"),
+    // new MeshComponent("cube/cube.glb"),
+    new MeshComponent("capsule/capsule.glb"),
     new MetadataComponent(name),
-    new PhysxBoxComponent(new(.95f, .95f, .95f), false),
+    new PhysxCapsuleComponent(.5f, 1f, false),
+    // new PhysxBoxComponent(new(.95f, .95f, .95f), false),
     new PhysxRigidbodyComponent(1f, 0.01f, 0.01f, false),
-    TransformComponent.Identity with { Position = pos + new Vector3(0, -10, 0)}
+    TransformComponent.Identity with { Position = pos + new Vector3(0, -10, 0), Rotation = LarkUtils.CreateFromYawPitchRoll(0, 0, 0)}
   ];
 
   public override Task Init() {

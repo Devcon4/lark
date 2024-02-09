@@ -49,14 +49,6 @@ public partial class Engine(LarkWindow larkWindow, IEnumerable<ILarkModule> modu
         module.Run().Wait();
       }
 
-      // log IsFocused, current thread id, and main thread id.
-      logger.LogInformation("IsFocused: {IsFocused} :: Current Thread: {threadId}", larkWindow.IsFocused, Environment.CurrentManagedThreadId);
-
-      // logger.LogInformation("IsFocused: {IsFocused}", IsFocused);
-      // Log the current thread id.
-      logger.LogInformation("Current Thread: {threadId}", Environment.CurrentManagedThreadId);
-      // LogWindow();
-
       double frameTime = frameSW.Elapsed.TotalMilliseconds;
       if (gameSettings.CurrentValue.FPSLimit.HasValue && frameTime < targetTime) {
         double sleepTime = targetTime - frameTime;
