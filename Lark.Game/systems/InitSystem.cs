@@ -38,7 +38,7 @@ public class InitSystem(EntityManager em, TimeManager tm, ActionManager am, Inpu
       logger.LogInformation("Move :: {name}", name);
       sw.Stop();
       var (key, components) = entity;
-      var (velocity, transform) = components.Get<VelocityComponent, TransformComponent>();
+      var (velocity, transform) = components.Get<VelocityOldComponent, TransformComponent>();
 
       // convert speed to m/s using delta time. A speed of 1 is 1m/s.
       var normalizedSpeed = speed / 10f * (float)tm.DeltaTime.TotalMilliseconds;
@@ -69,7 +69,7 @@ public class InitSystem(EntityManager em, TimeManager tm, ActionManager am, Inpu
 
       logger.LogInformation("Jump :: Triggered :: {duration} :: {key}", jumpDuration, key);
 
-      var (transform, velocity) = components.Get<TransformComponent, VelocityComponent>();
+      var (transform, velocity) = components.Get<TransformComponent, VelocityOldComponent>();
 
       if (!components.Has<JumpComponent>()) {
         logger.LogInformation("Jump :: Add :: {duration} :: {key}", jumpDuration, key);
@@ -136,13 +136,14 @@ public class InitSystem(EntityManager em, TimeManager tm, ActionManager am, Inpu
     var exitAction = new ActionComponent("Exit", (entity, input) => sm.Exit());
     var jumpAction = new ActionComponent("Jump", Jump("Jump", TimeSpan.FromSeconds(1.2f))); // 1.2 seconds
 
+    em.AddEntity(new MetadataComponent("Global-Actions"), exitAction);
 
     // em.AddEntity(new MetadataComponent("Camera-1"), new PhysxCapsuleComponent(.05f, .5f, true), jumpAction, moveForwardAction, moveBackwardAction, moveLeftAction, moveRightAction, exitAction, new VelocityComponent(), new CameraComponent() with { Active = true }, cameraTransform);
-    em.AddEntity(new MetadataComponent("Camera-1"), new VelocityComponent(), new CameraComponent() with { Active = true }, cameraTransform,
-    exitAction, jumpAction,
-    moveForwardAction, moveBackwardAction, moveLeftAction, moveRightAction
-    // wAction, sAction, aAction, dAction
-    );
+    // em.AddEntity(new MetadataComponent("Camera-1"), new VelocityComponent(), new CameraComponent() with { Active = true }, cameraTransform,
+    // exitAction, jumpAction,
+    // moveForwardAction, moveBackwardAction, moveLeftAction, moveRightAction
+    // // wAction, sAction, aAction, dAction
+    // );
 
     // em.AddEntity(new MeshComponent("antiqueCamera/AntiqueCamera.gltf"), new MetadataComponent("Antique-1"), start with { Position = new(15, 1, 0) });
     em.AddEntity(new MeshComponent("testPlane/test_plane.glb"), new MetadataComponent("plane-1"),

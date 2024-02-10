@@ -6,7 +6,7 @@ using Lark.Engine.physx.managers;
 
 namespace Lark.Engine.physx.systems;
 
-public class PhysxMaterialSystem(EntityManager em, PhysxManager pm) : LarkSystem {
+public class PhysxMaterialSystem(PhysxManager pm) : LarkSystem {
   public override Type[] RequiredComponents => [typeof(PhysxMaterialComponent)];
 
 

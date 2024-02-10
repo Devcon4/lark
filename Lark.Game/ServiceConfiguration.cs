@@ -14,6 +14,8 @@ public static class ServiceConfiguration {
     services.AddSingleton<ILarkSystem, JumpSystem>();
     services.AddSingleton<ILarkSystem, VelocitySystem>();
     services.AddSingleton<ILarkSystem, PhysxInitSystem>();
+    services.AddSingleton<ILarkSystem, CharacterSystem>();
+    services.AddSingleton<ILarkSystem, CharacterTransformSystem>();
     return services;
   }
 }

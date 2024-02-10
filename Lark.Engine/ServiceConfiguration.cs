@@ -18,6 +18,9 @@ public static class ServiceConfiguration {
 
     services.AddSingleton<PhysxData>();
     services.AddSingleton<PhysxManager>();
+    services.AddSingleton<PhysxColliderManager>();
+    services.AddSingleton<PhysxCharacterManager>();
+
     services.AddSingleton<ILarkSystem, PhysxWorldSystem>();
 
     services.AddSingleton<ILarkSystem, PhysxPlaneSystem>();
@@ -28,6 +31,7 @@ public static class ServiceConfiguration {
     services.AddSingleton<ILarkSystem, PhysxMaterialSystem>();
     services.AddSingleton<ILarkSystem, PhysxTransformSystem>();
     services.AddSingleton<ILarkSystem, PhysxRigidbodySystem>();
+    services.AddSingleton<ILarkSystem, PhysxCharacterSystem>();
 
     return services;
   }

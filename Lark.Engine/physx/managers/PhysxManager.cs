@@ -120,10 +120,16 @@ public class PhysxManager(ILogger<PhysxManager> logger, EntityManager em, TimeMa
     CreateFoundation();
     CreateScene();
     SetGravity(existing.Value.Gravity);
+    CreateControllerManager();
 
     // Register default material
     DefaultMaterialId = Guid.NewGuid();
     RegisterMaterial(DefaultMaterialId, 0.5f, 0.5f, 0.6f);
+  }
+
+  public unsafe void CreateControllerManager() {
+    logger.LogInformation("Physx :: Creating CCT manager");
+    physxData.ControllerManager = phys_PxCreateControllerManager(physxData.Scene, false);
   }
 
   public bool HasMaterial(Guid materialId) {
@@ -144,148 +150,15 @@ public class PhysxManager(ILogger<PhysxManager> logger, EntityManager em, TimeMa
     physxData.Materials.Add(materialId, new(material));
   }
 
-  public unsafe Guid RegisterPlane(Vector3 position, Vector3 normal, Guid materialId) {
-    logger.LogInformation("Physx :: Registering plane");
-    var p = new PxVec3 { x = position.X, y = position.Y, z = position.Z };
-    var n = new PxVec3 { x = normal.X, y = normal.Y, z = normal.Z };
-
-    var plane = PxPlane_new_3(&p, &n);
-    var transform = phys_PxTransformFromPlaneEquation(&plane);
-    var identity = PxTransform_new_2(PxIDENTITY.PxIdentity);
-
-    if (!physxData.Materials.TryGetValue(materialId, out var material)) {
-      material = physxData.Materials[DefaultMaterialId];
+  public LarkPhysxMaterial GetMaterial(Guid materialId) {
+    if (!HasMaterial(materialId)) {
+      throw new Exception($"Material {materialId} does not exist");
     }
 
-    // plane has no geometry, all needed is the transform. Create empty geometry.
-    var geo = PxPlaneGeometry_new();
-
-    PxActor* physicsObject;
-    physicsObject = (PxActor*)physxData.Physics->PhysPxCreateStatic(&transform, (PxGeometry*)&geo, material.Material, &identity);
-
-    var larkActor = new LarkPhysxActor(physicsObject);
-    physxData.Scene->AddActorMut(larkActor.Actor, null);
-
-    var guid = Guid.NewGuid();
-    ActorLookup.Add(guid, larkActor);
-    return guid;
+    return physxData.Materials[materialId];
   }
 
-  // GetPlaneRotation: Returns the rotation transformed from the plane equation
-  public unsafe Quaternion GetPlaneRotation(Guid actorId) {
-    if (!ActorLookup.TryGetValue(actorId, out var actor)) {
-      throw new Exception($"Actor {actorId} does not exist");
-    }
 
-    var transform = PxRigidActor_getGlobalPose((PxRigidActor*)actor.Actor);
-    var plane = phys_PxPlaneEquationFromTransform(&transform);
-
-    var normal = new Vector3(plane.n.x, plane.n.y, plane.n.z);
-    var rot = LarkUtils.RotationFromNormal(normal);
-    return rot;
-  }
-
-  // GetCapsuleRotation: Returns the rotation transformed from the capsule orientation
-  public unsafe Quaternion GetCapsuleRotation(Guid actorId) {
-    if (!ActorLookup.TryGetValue(actorId, out var actor)) {
-      throw new Exception($"Actor {actorId} does not exist");
-    }
-
-    var transform = PxRigidActor_getGlobalPose((PxRigidActor*)actor.Actor);
-
-    // Capsule orientation is along the y axis, so we need to rotate the transform component to match.
-    var rot = new Quaternion(transform.q.x, transform.q.y, transform.q.z, transform.q.w);
-    rot *= Quaternion.CreateFromAxisAngle(-Vector3.UnitZ, MathF.PI / 2);
-
-
-    return rot;
-  }
-
-  public unsafe Guid RegisterBox(Vector3 position, Quaternion rotation, Vector3 size, bool isStatic, Guid materialId) {
-    logger.LogInformation("Physx :: Registering box");
-    var p = new PxVec3 { x = position.X, y = position.Y, z = position.Z };
-    var s = new PxVec3 { x = size.X, y = size.Y, z = size.Z };
-    var q = new PxQuat { x = rotation.X, y = rotation.Y, z = rotation.Z, w = rotation.W };
-    var box = PxBoxGeometry_new_1(s);
-    var transform = PxTransform_new_5(&p, &q);
-    var identity = PxTransform_new_2(PxIDENTITY.PxIdentity);
-
-    if (!physxData.Materials.TryGetValue(materialId, out var material)) {
-      material = physxData.Materials[DefaultMaterialId];
-    }
-    PxActor* physicsObject;
-    if (isStatic) {
-      physicsObject = (PxActor*)physxData.Physics->PhysPxCreateStatic(&transform, (PxGeometry*)&box, material.Material, &identity);
-    }
-    else {
-      physicsObject = (PxActor*)physxData.Physics->PhysPxCreateDynamic(&transform, (PxGeometry*)&box, material.Material, 1.0f, &identity);
-    }
-
-    var larkActor = new LarkPhysxActor(physicsObject);
-    physxData.Scene->AddActorMut(larkActor.Actor, null);
-
-    var guid = Guid.NewGuid();
-    ActorLookup.Add(guid, larkActor);
-    return guid;
-  }
-
-  public unsafe Guid RegisterSphere(Vector3 position, Quaternion rotation, float radius, bool isStatic, Guid materialId) {
-    logger.LogInformation("Physx :: Registering sphere");
-    var p = new PxVec3 { x = position.X, y = position.Y, z = position.Z };
-    var q = new PxQuat { x = rotation.X, y = rotation.Y, z = rotation.Z, w = rotation.W };
-    var sphere = PxSphereGeometry_new(radius);
-    var transform = PxTransform_new_5(&p, &q);
-    var identity = PxTransform_new_2(PxIDENTITY.PxIdentity);
-
-    if (!physxData.Materials.TryGetValue(materialId, out var material)) {
-      material = physxData.Materials[DefaultMaterialId];
-    }
-
-    PxActor* physicsObject;
-    if (isStatic) {
-      physicsObject = (PxActor*)physxData.Physics->PhysPxCreateStatic(&transform, (PxGeometry*)&sphere, material.Material, &identity);
-    }
-    else {
-      physicsObject = (PxActor*)physxData.Physics->PhysPxCreateDynamic(&transform, (PxGeometry*)&sphere, material.Material, 1.0f, &identity);
-    }
-
-    var larkActor = new LarkPhysxActor(physicsObject);
-    physxData.Scene->AddActorMut(larkActor.Actor, null);
-
-    var guid = Guid.NewGuid();
-    ActorLookup.Add(guid, larkActor);
-    return guid;
-  }
-
-  public unsafe Guid RegisterCapsule(Vector3 position, Quaternion rotation, float radius, float height, bool isStatic, Guid materialId) {
-    logger.LogInformation("Physx :: Registering capsule");
-    var p = new PxVec3 { x = position.X, y = position.Y, z = position.Z };
-    var q = new PxQuat { x = rotation.X, y = rotation.Y, z = rotation.Z, w = rotation.W };
-    var capsule = PxCapsuleGeometry_new(radius, height / 2);
-    var transform = PxTransform_new_5(&p, &q);
-    var identity = PxTransform_new_2(PxIDENTITY.PxIdentity);
-
-    if (!physxData.Materials.TryGetValue(materialId, out var material)) {
-      material = physxData.Materials[DefaultMaterialId];
-    }
-
-    PxActor* physicsObject;
-    if (isStatic) {
-      physicsObject = (PxActor*)physxData.Physics->PhysPxCreateStatic(&transform, (PxGeometry*)&capsule, material.Material, &identity);
-    }
-    else {
-      physicsObject = (PxActor*)physxData.Physics->PhysPxCreateDynamic(&transform, (PxGeometry*)&capsule, material.Material, 1.0f, &identity);
-    }
-
-    var larkActor = new LarkPhysxActor(physicsObject);
-    physxData.Scene->AddActorMut(larkActor.Actor, null);
-
-    var guid = Guid.NewGuid();
-    ActorLookup.Add(guid, larkActor);
-    return guid;
-  }
-
-  // Delete Actor
   public unsafe void DeleteActor(Guid actorId) {
     logger.LogInformation("Physx :: Deleting actor {actorId}", actorId);
     if (!ActorLookup.TryGetValue(actorId, out var actor)) {
@@ -372,6 +245,7 @@ public class PhysxManager(ILogger<PhysxManager> logger, EntityManager em, TimeMa
     physxData.Physics = phys_PxCreatePhysics(versionNumber, physxData.Foundation, &tolerancesScale, true, physxData.PVD, null);
     phys_PxInitExtensions(physxData.Physics, physxData.PVD);
 
+
     var sceneDesc = PxSceneDesc_new(PxPhysics_getTolerancesScale(physxData.Physics));
     var dispatcher = phys_PxDefaultCpuDispatcherCreate(4, null, PxDefaultCpuDispatcherWaitForWorkMode.WaitForWork, 0);
     sceneDesc.cpuDispatcher = (PxCpuDispatcher*)dispatcher;
@@ -381,7 +255,7 @@ public class PhysxManager(ILogger<PhysxManager> logger, EntityManager em, TimeMa
     physxData.SceneDesc = sceneDesc;
   }
 
-  private unsafe void SetGravity(Vector3 gravity) {
+  public unsafe void SetGravity(Vector3 gravity) {
 
     logger.LogInformation("Physx :: Setting gravity to {gravity}", gravity);
 
@@ -391,6 +265,15 @@ public class PhysxManager(ILogger<PhysxManager> logger, EntityManager em, TimeMa
 
     var g = new PxVec3 { x = gravity.X, y = gravity.Y, z = gravity.Z };
     physxData.Scene->SetGravityMut(&g);
+  }
+
+  public unsafe Vector3 GetGravity() {
+    if (physxData.Scene is null) {
+      throw new Exception("Scene is null, make sure to call CreateScene first");
+    }
+
+    var g = physxData.Scene->GetGravity();
+    return new Vector3((float)g.x, (float)g.y, (float)g.z);
   }
 
   private unsafe void CreateScene() {

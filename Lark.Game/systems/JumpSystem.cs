@@ -7,10 +7,10 @@ using Microsoft.Extensions.Logging;
 
 namespace Lark.Game.systems;
 
-public record struct VelocityComponent(Vector3 MoveDelta, Vector3 JumpDelta) : ILarkComponent { }
+public record struct VelocityOldComponent(Vector3 MoveDelta, Vector3 JumpDelta) : ILarkComponent { }
 
 public class JumpSystem(EntityManager em, TimeManager tm, ILogger<JumpSystem> logger) : LarkSystem {
-  public override Type[] RequiredComponents => [typeof(VelocityComponent), typeof(JumpComponent)];
+  public override Type[] RequiredComponents => [typeof(VelocityOldComponent), typeof(JumpComponent)];
 
 
 
@@ -18,7 +18,7 @@ public class JumpSystem(EntityManager em, TimeManager tm, ILogger<JumpSystem> lo
     var (key, components) = entity;
     var jump = components.Get<JumpComponent>();
     var transform = components.Get<TransformComponent>();
-    var velocity = components.Get<VelocityComponent>();
+    var velocity = components.Get<VelocityOldComponent>();
 
     var End = jump.End;
     // var Progress = jump.Progress + (float)(tm.DeltaTime.TotalMilliseconds / jump.Duration.TotalMilliseconds);

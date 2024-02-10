@@ -9,10 +9,8 @@ namespace Lark.Engine.physx.systems;
 
 public record struct PhysxBoxComponent(Vector3 Scale, bool IsStatic = false) : ILarkComponent { }
 
-public class PhysxBoxSystem(EntityManager em, PhysxManager pm) : LarkSystem {
+public class PhysxBoxSystem(EntityManager em, PhysxColliderManager pcm, PhysxManager pm) : LarkSystem {
   public override Type[] RequiredComponents => [typeof(PhysxBoxComponent), typeof(TransformComponent)];
-
-
 
   public override void Update((Guid, FrozenSet<ILarkComponent>) Entity) {
     var (id, components) = Entity;
@@ -26,7 +24,7 @@ public class PhysxBoxSystem(EntityManager em, PhysxManager pm) : LarkSystem {
 
     // If the actor has not been created yet, create it.
     if (!pm.HasActor(id)) {
-      var actorId = pm.RegisterBox(transform.Position, transform.Rotation, boxComponent.Scale, boxComponent.IsStatic, id);
+      var actorId = pcm.RegisterBox(transform.Position, transform.Rotation, boxComponent.Scale, boxComponent.IsStatic, id);
       pm.SetActorId(id, actorId);
     }
   }

@@ -23,6 +23,28 @@ public record LarkCubicBezier(Vector3 P0, Vector3 P1, Vector3 P2, Vector3 P3) : 
     return B;
   }
 }
+public class LarkSlerp(Vector3 start, Vector3 end) : ILarkCurve {
+  public Vector3 ComputePoint(float t) {
+    // Compute the cosine of the angle between the two vectors.
+    var cosTheta = Vector3.Dot(start, end);
+
+    // Clamp the value to the range [-1, 1] to account for possible floating-point errors
+    cosTheta = Math.Clamp(cosTheta, -1f, 1f);
+
+    // Compute the angle between the start and end vectors
+    var theta = Math.Acos(cosTheta);
+
+    // If the angle is close to zero, just linearly interpolate
+    if (Math.Abs(theta) < 1e-5) {
+      return Vector3.Lerp(start, end, t);
+    }
+
+    // Perform the Slerp
+    var sinTheta = Math.Sin(theta);
+    return (float)(Math.Sin((1 - t) * theta) / sinTheta) * start + (float)(Math.Sin(t * theta) / sinTheta) * end;
+  }
+}
+
 public class LarkBezier : ILarkCurve {
   public Vector3[] ControlPoints { get; }
 
@@ -72,6 +94,20 @@ public static class CurveUtils {
     new(0.58f, 1, 0),
     new(1, 1, 1)
   );
+
+  // Slerp; Curve that represents a Spherical Linear Interpolation.
+  // Spherical linear represents a point along a circle that touches the start and end points.
+  public static ILarkCurve Slerp => new LarkSlerp(
+    new(0, 0, 0),
+    new(1, 1, 1)
+  );
+
+  // SlertXZ; Slerp but only in the XZ plane
+  public static ILarkCurve SlerpXZ => new LarkSlerp(
+    new(0, 0, 0),
+    new(1, 0, 1)
+  );
+
 
   public static ILarkCurve Jump => new LarkBezier(
     new(0, 0, 0), // Start at the ground

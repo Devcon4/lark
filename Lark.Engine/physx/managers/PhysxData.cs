@@ -8,6 +8,7 @@ public unsafe class PhysxData {
   public PxDefaultCpuDispatcher* Dispatcher;
   public PxSceneDesc SceneDesc;
   public PxScene* Scene;
+  public PxControllerManager* ControllerManager;
 
   public Dictionary<Guid, LarkPhysxMaterial> Materials = [];
 

@@ -13,7 +13,7 @@ namespace Lark.Engine.physx.systems;
 // System which registers PhysxPlaneComponents with the PhysxManager. If the entity is a regidbody update the transform component with the new position.
 public record struct PhysxPlaneComponent() : ILarkComponent { }
 
-public class PhysxPlaneSystem(EntityManager em, PhysxManager pm, ILogger<PhysxPlaneSystem> logger) : LarkSystem {
+public class PhysxPlaneSystem(EntityManager em, PhysxManager pm, PhysxColliderManager pcm, ILogger<PhysxPlaneSystem> logger) : LarkSystem {
   public override Type[] RequiredComponents => [typeof(PhysxPlaneComponent), typeof(TransformComponent)];
 
   public override void Update((Guid, FrozenSet<ILarkComponent>) Entity) {
@@ -32,7 +32,7 @@ public class PhysxPlaneSystem(EntityManager em, PhysxManager pm, ILogger<PhysxPl
       var normal = Vector3.Transform(up, transform.Rotation);
       logger.LogInformation("PhysxPlaneSystem :: pos {pos} :: normal {normal}", transform.Position, normal);
 
-      var actorId = pm.RegisterPlane(transform.Position, normal, id);
+      var actorId = pcm.RegisterPlane(transform.Position, normal, id);
       pm.SetActorId(id, actorId);
     }
   }

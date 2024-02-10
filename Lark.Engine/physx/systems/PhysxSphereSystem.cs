@@ -8,7 +8,7 @@ namespace Lark.Engine.physx.systems;
 
 public record struct PhysxSphereComponent(float Radius, bool IsStatic = false) : ILarkComponent { }
 
-public class PhysxSphereSystem(PhysxManager pm, EntityManager em) : LarkSystem {
+public class PhysxSphereSystem(PhysxManager pm, EntityManager em, PhysxColliderManager pcm) : LarkSystem {
   public override Type[] RequiredComponents => [typeof(PhysxSphereComponent), typeof(TransformComponent)];
 
 
@@ -25,7 +25,7 @@ public class PhysxSphereSystem(PhysxManager pm, EntityManager em) : LarkSystem {
 
     // If the actor has not been created yet, create it.
     if (!pm.HasActor(id)) {
-      var actorId = pm.RegisterSphere(transform.Position, transform.Rotation, sphereComponent.Radius, sphereComponent.IsStatic, id);
+      var actorId = pcm.RegisterSphere(transform.Position, transform.Rotation, sphereComponent.Radius, sphereComponent.IsStatic, id);
       pm.SetActorId(id, actorId);
     }
   }

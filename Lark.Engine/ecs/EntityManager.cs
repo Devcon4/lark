@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Frozen;
 using System.Collections.Immutable;
@@ -94,6 +95,14 @@ public class EntityManager(ILogger<EntityManager> logger) {
       }
     }
     await Task.CompletedTask;
+  }
+
+  public IEnumerable<ValueTuple<Guid, FrozenSet<ILarkComponent>>> GetEntitiesWithComponentsSync(params Type[] componentTypes) {
+    foreach (var (key, components) in entities) {
+      if (entityComponents[key].IsSupersetOf(componentTypes)) {
+        yield return new(key, components);
+      }
+    }
   }
 
   // GetEntityIdsWithComponents: Get the ids of all entities that have all of the specified components.

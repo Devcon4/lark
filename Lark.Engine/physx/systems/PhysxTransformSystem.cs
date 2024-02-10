@@ -7,7 +7,7 @@ using Lark.Engine.std;
 
 namespace Lark.Engine.physx.systems;
 
-public class PhysxTransformSystem(EntityManager em, PhysxManager pm) : LarkSystem {
+public class PhysxTransformSystem(EntityManager em, PhysxManager pm, PhysxColliderManager pcm) : LarkSystem {
   public override Type[] RequiredComponents => [typeof(TransformComponent)];
 
   public override void Update((Guid, FrozenSet<ILarkComponent>) Entity) {
@@ -24,12 +24,12 @@ public class PhysxTransformSystem(EntityManager em, PhysxManager pm) : LarkSyste
 
     // If the entity has a physxPlaneComponent, adjust rotation from physx to match engine space.
     if (components.Has<PhysxPlaneComponent>()) {
-      rot = pm.GetPlaneRotation(actorId);
+      rot = pcm.GetPlaneRotation(actorId);
     }
 
     // If the entity has a physxCapsuleComponent, adjust rotation from physx to match engine space.
     if (components.Has<PhysxCapsuleComponent>()) {
-      rot = pm.GetCapsuleRotation(actorId);
+      rot = pcm.GetCapsuleRotation(actorId);
     }
 
     var newTransform = transform with {
