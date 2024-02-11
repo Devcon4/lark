@@ -63,6 +63,16 @@ public class LarkBezier : ILarkCurve {
       }
     }
 
+    // When t is 0 or greater than 1, the result is the first or last control point, return it directly to avoid floating point errors
+    if (t == 0) {
+      Console.WriteLine("t == 0");
+      return ControlPoints[0];
+    }
+
+    if (t >= 1) {
+      return ControlPoints[^1];
+    }
+
     return points[0];
   }
 }
@@ -72,6 +82,13 @@ public static class CurveUtils {
     new(),
     new(1, 1, 1),
     new(1, 1, 1)
+  );
+
+  public static ILarkCurve LinearJump => new LarkCubicBezier(
+    new(),
+    new(0, -1, 0),
+    new(0, -1, 0),
+    new()
   );
 
   public static ILarkCurve EaseIn => new LarkCubicBezier(

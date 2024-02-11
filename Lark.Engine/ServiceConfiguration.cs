@@ -11,27 +11,44 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Lark.Engine;
 public static class ServiceConfiguration {
 
+  // Managers can be injected directly.
+  public static IServiceCollection AddLarkManager<T>(this IServiceCollection services) where T : LarkManager {
+    services.AddSingleton<T>();
+    services.AddSingleton<ILarkManager, T>(sp => sp.GetRequiredService<T>());
+    return services;
+  }
+
+  public static IServiceCollection AddLarkSystem<T>(this IServiceCollection services) where T : LarkSystem {
+    services.AddSingleton<ILarkSystem, T>();
+    return services;
+  }
+
+  public static IServiceCollection AddLarkModule<T>(this IServiceCollection services) where T : class, ILarkModule {
+    services.AddSingleton<ILarkModule, T>();
+    return services;
+  }
+
   public static IServiceCollection AddLarkPhysx(this IServiceCollection services, IConfiguration configuration) {
     services.AddSingleton<ILarkModule, PhysxModule>();
 
     services.Configure<LarkPhysxConfig>(configuration.GetSection("LarkPhysx"));
 
     services.AddSingleton<PhysxData>();
-    services.AddSingleton<PhysxManager>();
-    services.AddSingleton<PhysxColliderManager>();
-    services.AddSingleton<PhysxCharacterManager>();
+    services.AddLarkManager<PhysxManager>();
+    services.AddLarkManager<PhysxColliderManager>();
+    services.AddLarkManager<PhysxCharacterManager>();
 
-    services.AddSingleton<ILarkSystem, PhysxWorldSystem>();
+    services.AddLarkSystem<PhysxWorldSystem>();
 
-    services.AddSingleton<ILarkSystem, PhysxPlaneSystem>();
-    services.AddSingleton<ILarkSystem, PhysxBoxSystem>();
-    services.AddSingleton<ILarkSystem, PhysxCapsuleSystem>();
-    services.AddSingleton<ILarkSystem, PhysxSphereSystem>();
+    services.AddLarkSystem<PhysxPlaneSystem>();
+    services.AddLarkSystem<PhysxBoxSystem>();
+    services.AddLarkSystem<PhysxCapsuleSystem>();
+    services.AddLarkSystem<PhysxSphereSystem>();
 
-    services.AddSingleton<ILarkSystem, PhysxMaterialSystem>();
-    services.AddSingleton<ILarkSystem, PhysxTransformSystem>();
-    services.AddSingleton<ILarkSystem, PhysxRigidbodySystem>();
-    services.AddSingleton<ILarkSystem, PhysxCharacterSystem>();
+    services.AddLarkSystem<PhysxMaterialSystem>();
+    services.AddLarkSystem<PhysxTransformSystem>();
+    services.AddLarkSystem<PhysxRigidbodySystem>();
+    services.AddLarkSystem<PhysxCharacterSystem>();
 
     return services;
   }
@@ -49,33 +66,33 @@ public static class ServiceConfiguration {
   }
 
   public static IServiceCollection AddLarkSTD(this IServiceCollection services) {
-    services.AddSingleton<ILarkSystem, RenderSystem>();
-    services.AddSingleton<ILarkSystem, CameraSystem>();
-    services.AddSingleton<ILarkSystem, InputSystem>();
-    services.AddSingleton<ILarkSystem, CurrentKeySystem>();
+    services.AddLarkSystem<RenderSystem>();
+    services.AddLarkSystem<CameraSystem>();
+    services.AddLarkSystem<InputSystem>();
+    services.AddLarkSystem<CurrentKeySystem>();
 
-    services.AddSingleton<TimeManager>();
-    services.AddSingleton<InputManager>();
-    services.AddSingleton<ActionManager>();
-    services.AddSingleton<ShutdownManager>();
-    services.AddSingleton<CameraManager>();
+    services.AddLarkManager<TimeManager>();
+    services.AddLarkManager<InputManager>();
+    services.AddLarkManager<ActionManager>();
+    services.AddLarkManager<ShutdownManager>();
+    services.AddLarkManager<CameraManager>();
 
-    services.AddSingleton<ILarkModule, ActionModule>();
+    services.AddLarkModule<ActionModule>();
 
     return services;
   }
 
   // AddECSServices
   public static IServiceCollection AddLarkECS(this IServiceCollection services) {
-    services.AddSingleton<ILarkModule, EcsModule>();
-    services.AddSingleton<EntityManager>();
-    services.AddSingleton<SystemManager>();
+    services.AddLarkModule<EcsModule>();
+    services.AddLarkManager<EntityManager>();
+    services.AddLarkManager<SystemManager>();
 
     return services;
   }
 
   public static IServiceCollection AddVulkanPipeline(this IServiceCollection services) {
-    services.AddSingleton<ILarkModule, VulkanModule>();
+    services.AddLarkModule<VulkanModule>();
 
     services.AddSingleton<LarkVulkanData>();
     services.AddSingleton<QueueFamilyUtil>();

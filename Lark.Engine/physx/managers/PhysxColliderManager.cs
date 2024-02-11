@@ -4,10 +4,11 @@ using Microsoft.Extensions.Logging;
 using MagicPhysX;
 using static MagicPhysX.NativeMethods;
 using Lark.Engine.std;
+using Lark.Engine.ecs;
 
 namespace Lark.Engine.physx.managers;
 
-public class PhysxColliderManager(ILogger<PhysxColliderManager> logger, PhysxManager pm, PhysxData physxData) {
+public class PhysxColliderManager(ILogger<PhysxColliderManager> logger, PhysxManager pm, PhysxData physxData) : LarkManager {
 
 
   // GetPlaneRotation: Returns the rotation transformed from the plane equation

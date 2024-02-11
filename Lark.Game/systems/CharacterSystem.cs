@@ -10,22 +10,13 @@ using Microsoft.Extensions.Logging;
 namespace Lark.Game.systems;
 
 public record struct CharacterMovementComponent(float Speed) : ILarkComponent { }
-
-public record struct CharacterDisplacementComponent(Vector3 ForwardDelta, Vector3 BackwardDelta, Vector3 LeftDelta, Vector3 RightDelta) : ILarkComponent {
-  public readonly bool Dirty => ForwardDelta != Vector3.Zero || BackwardDelta != Vector3.Zero || LeftDelta != Vector3.Zero || RightDelta != Vector3.Zero;
-  // public CharacterDisplacementComponent Displace(Vector3 force) {
-  //   if (Displacement == Vector3.Zero) {
-  //     return this with { Displacement = force };
-  //   }
-
-  //   // Slerp between the current displacement and the new displacement
-  //   // var newDisplacement = VectorUtils.Berp(Displacement, force, .5f, CurveUtils.SlerpXZ);
-  //   // var newDisplacement = Vector3.Lerp(Displacement, force, .5f);
-
-  //   var newDisplacement = Displacement + force;
-
-  //   return this with { Displacement = newDisplacement };
-  // }
+public record struct CharacterDisplacementComponent(Vector3 ForwardDelta, Vector3 BackwardDelta, Vector3 LeftDelta, Vector3 RightDelta, Vector3 JumpDelta) : ILarkComponent {
+  public readonly bool Dirty =>
+    ForwardDelta != Vector3.Zero ||
+    BackwardDelta != Vector3.Zero ||
+    LeftDelta != Vector3.Zero ||
+    RightDelta != Vector3.Zero ||
+    JumpDelta != Vector3.Zero;
 }
 
 public class CharacterSystem(ILogger<CharacterSystem> logger, EntityManager em, TimeManager tm, PhysxManager pm, PhysxCharacterManager pcm) : LarkSystem {
@@ -37,8 +28,6 @@ public class CharacterSystem(ILogger<CharacterSystem> logger, EntityManager em, 
 
     var vec = Vector3.Transform(-Vector3.UnitZ, transform.Rotation);
     var newDis = displacement with { ForwardDelta = vec };
-
-    logger.LogInformation("MoveForward :: {displacement}", newDis);
     em.UpdateEntityComponent(key, newDis);
   };
 
@@ -49,7 +38,6 @@ public class CharacterSystem(ILogger<CharacterSystem> logger, EntityManager em, 
     var vec = Vector3.Transform(Vector3.UnitZ, transform.Rotation);
     var newDis = displacement with { BackwardDelta = vec };
 
-    logger.LogInformation("MoveBackward :: {displacement}", newDis);
     em.UpdateEntityComponent(key, newDis);
   };
 
@@ -60,7 +48,6 @@ public class CharacterSystem(ILogger<CharacterSystem> logger, EntityManager em, 
     var vec = Vector3.Transform(-Vector3.UnitX, transform.Rotation);
     var newDis = displacement with { LeftDelta = vec };
 
-    logger.LogInformation("MoveLeft :: {displacement}", newDis);
     em.UpdateEntityComponent(key, newDis);
   };
 
@@ -71,9 +58,26 @@ public class CharacterSystem(ILogger<CharacterSystem> logger, EntityManager em, 
     var vec = Vector3.Transform(Vector3.UnitX, transform.Rotation);
     var newDis = displacement with { RightDelta = vec };
 
-    logger.LogInformation("MoveRight :: {displacement}", newDis);
     em.UpdateEntityComponent(key, newDis);
   };
+
+  public Action<(Guid, FrozenSet<ILarkComponent>), FrozenSet<ILarkInput>> Jump() {
+    return (entity, inputs) => {
+      var (key, components) = entity;
+      logger.LogInformation("Jump :: Begin");
+      // var (transform, displacement) = components.Get<TransformComponent, CharacterDisplacementComponent>();
+
+      // If we have a jump component then we are already jumping
+      if (components.Has<CharacterJumpComponent>()) {
+        return;
+      }
+
+      logger.LogInformation("Jump :: Adding jump component");
+      var transform = components.Get<TransformComponent>();
+      var jump = new CharacterJumpComponent(CurveUtils.Jump, TimeSpan.FromSeconds(2), 1f, transform.Position);
+      em.AddEntityComponent(key, jump);
+    };
+  }
 
   public override Task Init() {
     var cameraTransform = TransformComponent.Identity with {
@@ -91,7 +95,8 @@ public class CharacterSystem(ILogger<CharacterSystem> logger, EntityManager em, 
       new ActionComponent("MoveForward", MoveForward()),
       new ActionComponent("MoveBackward", MoveBackward()),
       new ActionComponent("MoveLeft", MoveLeft()),
-      new ActionComponent("MoveRight", MoveRight())
+      new ActionComponent("MoveRight", MoveRight()),
+      new ActionComponent("Jump", Jump())
     );
 
     return Task.CompletedTask;
@@ -104,39 +109,23 @@ public class CharacterSystem(ILogger<CharacterSystem> logger, EntityManager em, 
     if (displacement.Dirty) {
       var movement = components.Get<CharacterMovementComponent>();
 
-      // Sum the displacements and normalize
+      // Sum the movement displacements and normalize.
       var displacementVector = Vector3.Normalize(displacement.ForwardDelta + displacement.BackwardDelta + displacement.LeftDelta + displacement.RightDelta);
+      // if displacementVector is nan, set it to zero
+
+      if (float.IsNaN(displacementVector.X) || float.IsNaN(displacementVector.Y) || float.IsNaN(displacementVector.Z)) {
+        displacementVector = Vector3.Zero;
+      }
+
       displacementVector *= movement.Speed * (float)tm.DeltaTime.TotalMilliseconds;
 
-      logger.LogInformation("Moving player by {displacement}", displacementVector);
+      logger.LogInformation("CharacterSystem :: Update :: {key} :: displacement {displacementVector} :: jump {jump}", key, displacementVector, displacement.JumpDelta);
+
+      // Dont normalize the jump delta.
+      displacementVector += displacement.JumpDelta;
+
       pcm.Move(key, displacementVector, (float)tm.DeltaTime.TotalMilliseconds);
       em.UpdateEntityComponent(key, new CharacterDisplacementComponent());
     }
-  }
-
-  // TODO: This afterUpdate is being called before the update, which should not happen.
-  // public override async void AfterUpdate() {
-  //   await foreach (var (key, components) in em.GetEntitiesWithComponents([typeof(CharacterDisplacementComponent)])) {
-  //     if (!components.Has<CharacterDisplacementComponent>()) {
-  //       continue;
-  //     }
-  //     // clear the displacement component
-  //     em.UpdateEntityComponent(key, new CharacterDisplacementComponent(Vector3.Zero));
-  //   }
-  // }
-}
-
-public class CharacterTransformSystem(PhysxCharacterManager pcm, EntityManager em) : LarkSystem {
-  public override Type[] RequiredComponents => [typeof(PhysxCharacterComponent), typeof(CharacterDisplacementComponent), typeof(TransformComponent)];
-
-  public override void Update((Guid, FrozenSet<ILarkComponent>) Entity) {
-    var (key, components) = Entity;
-    if (!pcm.HasController(key)) {
-      return;
-    }
-
-    var transform = components.Get<TransformComponent>();
-    var position = pcm.GetPosition(key);
-    em.UpdateEntityComponent(key, transform with { Position = position });
   }
 }

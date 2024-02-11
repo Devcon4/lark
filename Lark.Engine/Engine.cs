@@ -16,7 +16,6 @@ public class EcsModule(SystemManager systemManager) : ILarkModule {
   }
 
   public Task Init() {
-    systemManager.Init();
     return Task.CompletedTask;
   }
 
@@ -25,7 +24,7 @@ public class EcsModule(SystemManager systemManager) : ILarkModule {
   }
 }
 
-public partial class Engine(LarkWindow larkWindow, IEnumerable<ILarkModule> modules, ILogger<Engine> logger, IOptionsMonitor<GameSettings> gameSettings, IHostApplicationLifetime hostLifetime) {
+public partial class Engine(LarkWindow larkWindow, IEnumerable<ILarkModule> modules, IEnumerable<ILarkManager> managers, ILogger<Engine> logger, IOptionsMonitor<GameSettings> gameSettings, IHostApplicationLifetime hostLifetime) {
   public void Run(CancellationToken cancellationToken) {
     logger.LogInformation("Running engine... {thread}", Environment.CurrentManagedThreadId);
     larkWindow.Build();
@@ -68,10 +67,21 @@ public partial class Engine(LarkWindow larkWindow, IEnumerable<ILarkModule> modu
       logger.LogInformation("Initializing module {module}", module.GetType().Name);
       module.Init().Wait();
     }
+
+    foreach (var manager in managers) {
+      logger.LogInformation("Initializing manager {manager}", manager.GetType().Name);
+      manager.Init().Wait();
+    }
   }
 
   public void Cleanup() {
     logger.LogInformation("Disposing engine... {thread}", Environment.CurrentManagedThreadId);
+
+    foreach (var manager in managers) {
+      logger.LogInformation("Disposing manager {manager}", manager.GetType().Name);
+      manager.Cleanup().Wait();
+    }
+
     foreach (var module in modules) {
       logger.LogInformation("Disposing module {module}", module.GetType().Name);
       module.Cleanup();

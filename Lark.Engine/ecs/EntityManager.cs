@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Lark.Engine.ecs;
 
-public class EntityManager(ILogger<EntityManager> logger) {
+public class EntityManager(ILogger<EntityManager> logger) : LarkManager {
 
   private Dictionary<Guid, FrozenSet<ILarkComponent>> entities = new();
   private Dictionary<Guid, FrozenSet<Type>> entityComponents = new();

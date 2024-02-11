@@ -1,5 +1,6 @@
 using System.Numerics;
 using System.Runtime.InteropServices;
+using Lark.Engine.ecs;
 using MagicPhysX;
 using Microsoft.Extensions.Logging;
 
@@ -7,7 +8,7 @@ using static MagicPhysX.NativeMethods;
 
 namespace Lark.Engine.physx.managers;
 
-public class PhysxCharacterManager(ILogger<PhysxCharacterManager> Logger, PhysxData Data, PhysxManager pm) {
+public class PhysxCharacterManager(ILogger<PhysxCharacterManager> Logger, PhysxData Data, PhysxManager pm) : LarkManager {
 
   public Dictionary<Guid, LarkPhsyxController> Controllers { get; private set; } = [];
 
@@ -87,7 +88,6 @@ public class PhysxCharacterManager(ILogger<PhysxCharacterManager> Logger, PhysxD
     PxVec3 dis = new() { x = displacement.X, y = displacement.Y, z = displacement.Z };
     // controller.Controller->MoveMut(&dis, minDistance, elapsedTime, controller.Filters, null);
     PxController_move_mut(controller.Controller, &dis, float.Epsilon, elapsedTime, controller.Filters, null);
-
   }
 }
 

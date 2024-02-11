@@ -14,21 +14,28 @@ public class SystemManager(
   ILogger<SystemManager> logger,
   EntityManager entityManager,
   IEnumerable<ILarkSystem> systems,
-  IEnumerable<ILarkSyncSystem> syncSystems) {
-  public async void Init() {
-    data.sw.Start();
-    foreach (var system in systems) {
-      // If system has an Init method, call it.
-      if (system is ILarkSystemInit initSystem) {
-        await initSystem.Init();
+  IEnumerable<ILarkSyncSystem> syncSystems) : LarkManager {
+  public override Task Init() {
+    // Systems must be initialized after managers.
+    var _ = Task.Run(async () => {
+      data.sw.Start();
+      foreach (var system in systems) {
+        logger.LogInformation("Initializing system {system}", system.GetType().Name);
+        // If system has an Init method, call it.
+        if (system is ILarkSystemInit initSystem) {
+          await initSystem.Init();
+        }
       }
-    }
 
-    foreach (var system in syncSystems) {
-      if (system is ILarkSystemInit initSystem) {
-        await initSystem.Init();
+      foreach (var system in syncSystems) {
+        logger.LogInformation("Initializing sync system {system}", system.GetType().Name);
+        if (system is ILarkSystemInit initSystem) {
+          await initSystem.Init();
+        }
       }
-    }
+    });
+
+    return Task.CompletedTask;
   }
 
   private readonly BoundedChannelOptions options = new(100000) {

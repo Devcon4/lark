@@ -14,7 +14,7 @@ namespace Lark.Engine.physx.managers;
 
 public record struct PhysxEntityMarker : ILarkComponent { }
 
-public class PhysxManager(ILogger<PhysxManager> logger, EntityManager em, TimeManager tm, PhysxData physxData, IOptions<LarkPhysxConfig> options) {
+public class PhysxManager(ILogger<PhysxManager> logger, EntityManager em, TimeManager tm, PhysxData physxData, IOptions<LarkPhysxConfig> options) : LarkManager {
   public static Type[] PhysxWorldEntity => [typeof(SystemComponent), typeof(PhysxEntityMarker)];
 
   public Dictionary<Guid, Guid> EntityToActor = [];
@@ -294,7 +294,7 @@ public class PhysxManager(ILogger<PhysxManager> logger, EntityManager em, TimeMa
     }
   }
 
-  public unsafe void Cleanup() {
+  public unsafe void Dispose() {
     logger.LogInformation("Physx :: Disposing");
 
     foreach (var actor in ActorLookup.Values) {

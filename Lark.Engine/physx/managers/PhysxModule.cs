@@ -2,7 +2,7 @@ namespace Lark.Engine.physx.managers;
 
 public class PhysxModule(PhysxManager pm) : ILarkModule {
   public Task Cleanup() {
-    pm.Cleanup();
+    pm.Dispose();
     return Task.CompletedTask;
   }
 

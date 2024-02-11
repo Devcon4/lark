@@ -1,9 +1,10 @@
+using Lark.Engine.ecs;
 using Microsoft.Extensions.Logging;
 using Serilog.Context;
 
 namespace Lark.Engine.std;
 
-public class TimeManager(ILogger<TimeManager> logger) {
+public class TimeManager(ILogger<TimeManager> logger) : LarkManager {
   public TimeSpan DeltaTime { get; private set; }
   public TimeSpan TotalTime { get; private set; }
   public int FPS { get; private set; } = 0;

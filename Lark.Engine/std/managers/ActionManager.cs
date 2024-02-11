@@ -20,7 +20,7 @@ public class ActionModule(ActionManager am) : ILarkModule {
   }
 }
 
-public class ActionManager(EntityManager em, ILogger<ActionManager> logger) {
+public class ActionManager(EntityManager em, ILogger<ActionManager> logger) : LarkManager {
   public static Type[] ActionMapEntity => [typeof(SystemComponent), typeof(LarkMapComponent)];
   public static string DefaultMap => "Default";
 

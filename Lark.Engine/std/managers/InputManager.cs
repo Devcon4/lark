@@ -7,12 +7,32 @@ using Silk.NET.GLFW;
 
 namespace Lark.Engine.std;
 
-public class InputManager(ILogger<InputManager> logger, LarkWindow window, EntityManager em, ActionManager am) {
+public class InputManager(ILogger<InputManager> logger, LarkWindow window, EntityManager em, ActionManager am) : LarkManager {
 
   public static readonly Type[] InputEntity = [
     typeof(SystemComponent),
     typeof(InputEntityMarker)
   ];
+
+  public override Task Init() {
+    em.AddEntity(
+      new MetadataComponent("Input"),
+      new SystemComponent(),
+      new InputEntityMarker(),
+      new CurrentKeysInputComponent(),
+      new CurrentMouseInputComponent(),
+      new CurrentCursorInputComponent(),
+      new CurrentScrollInputComponent());
+
+    em.AddEntity(new MetadataComponent("ActionMap"), new SystemComponent(), new LarkMapComponent(ActionManager.DefaultMap, true, []));
+
+    window.SetKeyCallback(KeyCallbackAction);
+    window.SetMouseButtonCallback(MouseButtonCallbackAction);
+    window.SetCursorPosCallback(CursorPosCallbackAction);
+    window.SetScrollCallback(ScrollCallbackAction);
+
+    return Task.CompletedTask;
+  }
 
   public void SetCursorPosition(Vector2? position = null) {
     window.SetCursorPosition(position);

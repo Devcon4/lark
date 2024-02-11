@@ -9,34 +9,13 @@ public record struct InputEntityMarker : ILarkComponent { }
 
 public record struct ActionComponent(ActionName ActionName, Action<ValueTuple<Guid, FrozenSet<ILarkComponent>>, FrozenSet<ILarkInput>> Callback) : ILarkComponent { }
 
-public class InputSystem(EntityManager em, InputManager im, LarkWindow window, ILogger<InputSystem> logger) : LarkSystem {
+public class InputSystem(EntityManager em, ILogger<InputSystem> logger) : LarkSystem {
   public override Type[] RequiredComponents => [
     typeof(SystemComponent),
     typeof(InputEntityMarker)
     ];
 
-  public override Task Init() {
-    em.AddEntity(
-      new MetadataComponent("Input"),
-      new SystemComponent(),
-      new InputEntityMarker(),
-      new CurrentKeysInputComponent(),
-      new CurrentMouseInputComponent(),
-      new CurrentCursorInputComponent(),
-      new CurrentScrollInputComponent());
-
-    em.AddEntity(new MetadataComponent("ActionMap"), new SystemComponent(), new LarkMapComponent(ActionManager.DefaultMap, true, []));
-
-    window.SetKeyCallback(im.KeyCallbackAction);
-    window.SetMouseButtonCallback(im.MouseButtonCallbackAction);
-    window.SetCursorPosCallback(im.CursorPosCallbackAction);
-    window.SetScrollCallback(im.ScrollCallbackAction);
-
-    return Task.CompletedTask;
-  }
-
-  public override void Update((Guid, FrozenSet<ILarkComponent>) Entity) {
-  }
+  public override void Update((Guid, FrozenSet<ILarkComponent>) Entity) { }
 
   public override void AfterUpdate() {
     var (key, components) = em.GetEntity(InputManager.InputEntity);
