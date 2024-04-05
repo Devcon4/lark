@@ -43,7 +43,9 @@
     <MakeDir Directories="$(OutDir)\resources\textures" />
     <MakeDir Directories="$(OutDir)\resources\models" />
 
-    <Exec Command="glslc.exe -o &quot;$(OutDir)%(ShaderFiles.Identity).spv&quot; &quot;%(ShaderFiles.Identity)&quot;" />
+    <Exec Condition="'$(OS)' == 'Windows_NT'" Command="glslc.exe -o &quot;$(OutDir)%(ShaderFiles.Identity).spv&quot; &quot;%(ShaderFiles.Identity)&quot;" />
+    <Exec Condition="'$(OS)' != 'Windows_NT'" Command="glslc -o &quot;$(OutDir)%(ShaderFiles.Identity).spv&quot; &quot;%(ShaderFiles.Identity)&quot;" />
+    <!-- <Exec Command="glslc.exe -o &quot;$(OutDir)%(ShaderFiles.Identity).spv&quot; &quot;%(ShaderFiles.Identity)&quot;" /> -->
     <Copy SourceFiles="@(TextureFiles)" DestinationFolder="$(OutDir)resources\textures\%(RecursiveDir)" />
     <Copy SourceFiles="@(ModelFiles)" DestinationFolder="$(OutDir)resources\models\%(RecursiveDir)" />
   </Target>
