@@ -9,19 +9,25 @@ using Microsoft.Extensions.Options;
 using System.Runtime.InteropServices;
 using Silk.NET.OpenGL;
 using Serilog.Context;
+using System.Collections.Concurrent;
+using System.Collections.Frozen;
 
 namespace Lark.Engine.physx.managers;
 
 public record struct PhysxEntityMarker : ILarkComponent { }
 
 public class PhysxManager(ILogger<PhysxManager> logger, EntityManager em, TimeManager tm, PhysxData physxData, IOptions<LarkPhysxConfig> options) : LarkManager {
-  public static Type[] PhysxWorldEntity => [typeof(SystemComponent), typeof(PhysxEntityMarker)];
+  public ConcurrentDictionary<Guid, Guid> EntityToActor = [];
 
-  public Dictionary<Guid, Guid> EntityToActor = [];
-
-  public Dictionary<Guid, LarkPhysxActor> ActorLookup = [];
+  public ConcurrentDictionary<Guid, LarkPhysxActor> ActorLookup = [];
 
   public Guid DefaultMaterialId { get; private set; }
+
+  public override Task Init() {
+    DefaultMaterialId = Guid.NewGuid();
+    BuildPhysxWorld("Default");
+    return Task.CompletedTask;
+  }
 
   public bool HasActor(Guid entityId) {
     return EntityToActor.ContainsKey(entityId);
@@ -40,7 +46,7 @@ public class PhysxManager(ILogger<PhysxManager> logger, EntityManager em, TimeMa
       throw new Exception($"Entity {entityId} already has an actor");
     }
 
-    EntityToActor.Add(entityId, actorId);
+    EntityToActor.TryAdd(entityId, actorId);
   }
 
   private readonly object physxLock = new();
@@ -108,22 +114,31 @@ public class PhysxManager(ILogger<PhysxManager> logger, EntityManager em, TimeMa
     PxRigidBody_addTorque_mut(rigidbody, &t, forceMode, true);
   }
 
+  public unsafe void Move(Guid actorId, Vector3 position) {
+    if (!ActorLookup.TryGetValue(actorId, out var actor)) {
+      throw new Exception($"Actor {actorId} does not exist");
+    }
+
+    // warn if actor is not kinematic
+    if (!PxRigidBody_getRigidBodyFlags((PxRigidBody*)actor.Actor).HasFlag(PxRigidBodyFlags.Kinematic)) {
+      logger.LogWarning("Physx :: Actor {actorId} is not kinematic", actorId);
+    }
+
+    var rigidbody = (PxRigidDynamic*)actor.Actor;
+    var p = new PxVec3 { x = position.X, y = position.Y, z = position.Z };
+    var t = PxTransform_new_1(&p);
+    PxRigidDynamic_setKinematicTarget_mut(rigidbody, &t);
+  }
+
   public void BuildPhysxWorld(string worldName) {
     logger.LogInformation("Physx :: Building world {worldName}", worldName);
-    var (id, components) = em.GetEntity(PhysxWorldEntity);
-    PhysxWorldComponent? existing = components.GetList<PhysxWorldComponent>().FirstOrDefault(c => c.WorldName == worldName);
-
-    if (existing is null) {
-      throw new Exception($"World {worldName} does not exist");
-    }
 
     CreateFoundation();
     CreateScene();
-    SetGravity(existing.Value.Gravity);
+    SetGravity(new Vector3(0, -9.81f, 0)); // Default gravity
     CreateControllerManager();
 
     // Register default material
-    DefaultMaterialId = Guid.NewGuid();
     RegisterMaterial(DefaultMaterialId, 0.5f, 0.5f, 0.6f);
   }
 
@@ -158,8 +173,11 @@ public class PhysxManager(ILogger<PhysxManager> logger, EntityManager em, TimeMa
     return physxData.Materials[materialId];
   }
 
+  public unsafe void DeleteActor(Guid entityId) {
+    if (!EntityToActor.TryGetValue(entityId, out var actorId)) {
+      throw new Exception($"Entity {entityId} does not have an actor");
+    }
 
-  public unsafe void DeleteActor(Guid actorId) {
     logger.LogInformation("Physx :: Deleting actor {actorId}", actorId);
     if (!ActorLookup.TryGetValue(actorId, out var actor)) {
       throw new Exception($"Actor {actorId} does not exist");
@@ -167,8 +185,8 @@ public class PhysxManager(ILogger<PhysxManager> logger, EntityManager em, TimeMa
 
     physxData.Scene->RemoveActorMut(actor.Actor, true);
     PxRigidActor_release_mut((PxRigidActor*)actor.Actor);
-    ActorLookup.Remove(actorId);
-    EntityToActor.Remove(actorId);
+    EntityToActor.TryRemove(entityId, out _);
+    ActorLookup.TryRemove(actorId, out _);
   }
 
   public unsafe ValueTuple<Vector3, Quaternion> GetActorTransform(Guid actorId) {

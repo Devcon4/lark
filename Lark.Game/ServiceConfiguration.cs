@@ -1,5 +1,7 @@
+using Lark.Engine;
 using Lark.Engine.ecs;
 using Lark.Game.components;
+using Lark.Game.managers;
 using Lark.Game.systems;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -8,16 +10,22 @@ public static class ServiceConfiguration {
 
   // AddGameSystems
   public static IServiceCollection AddGameSystems(this IServiceCollection services) {
-    services.AddSingleton<ILarkSystem, LoggerSystem>();
-    services.AddSingleton<ILarkSystem, PhysicsSystem>();
-    services.AddSingleton<ILarkSystem, InitSystem>();
-    services.AddSingleton<ILarkSystem, JumpSystem>();
-    services.AddSingleton<ILarkSystem, VelocitySystem>();
-    services.AddSingleton<ILarkSystem, PhysxInitSystem>();
 
-    services.AddSingleton<ILarkSystem, CharacterSystem>();
-    services.AddSingleton<ILarkSystem, CharacterTransformSystem>();
-    services.AddSingleton<ILarkSystem, CharacterJumpSystem>();
+    services.AddLarkSystem<InitSystem>();
+    services.AddLarkSystem<JumpSystem>();
+    services.AddLarkSystem<VelocitySystem>();
+    services.AddLarkSystem<PhysxInitSystem>();
+
+    services.AddLarkSystem<HeroMainAttackSystem>();
+    services.AddLarkSystem<HeroAltAttackSystem>();
+
+    services.AddLarkSystem<CharacterSystem>();
+    services.AddLarkSystem<CharacterTransformSystem>();
+    services.AddLarkSystem<CharacterJumpSystem>();
+
+    services.AddLarkManager<AbilitySetManager>();
+    services.AddLarkSystem<CastAbilitySystem>();
+    services.AddLarkSystem<CastInstanceSystem>();
     return services;
   }
 }

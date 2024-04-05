@@ -28,7 +28,11 @@ public class LarkWindow(ILogger<LarkWindow> logger, ShutdownManager shutdownMana
     });
 
     _glfw.WindowHint(WindowHintClientApi.ClientApi, ClientApi.NoApi);
-    _glfw.WindowHint(WindowHintBool.Resizable, true);
+    _glfw.WindowHint(WindowHintBool.Resizable, false); // TODO: Fix this later, currently has a swapchain resize crash.
+    _glfw.WindowHint(WindowHintBool.Focused, true);
+    _glfw.WindowHint(WindowHintBool.Visible, true);
+    _glfw.WindowHint(WindowHintBool.CenterCursor, true);
+    _glfw.WindowHint(WindowHintBool.FocusOnShow, true);
 
     windowHandle = _glfw.CreateWindow(800, 600, "Lark", null, null);
 
@@ -36,7 +40,7 @@ public class LarkWindow(ILogger<LarkWindow> logger, ShutdownManager shutdownMana
       throw new Exception("Failed to create GLFW window");
     }
 
-    _glfw.FocusWindow(windowHandle);
+    // _glfw.FocusWindow(windowHandle);
 
     _glfw.SetWindowCloseCallback(windowHandle, (window) => {
       OnClosing();

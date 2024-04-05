@@ -24,6 +24,12 @@ public class ActionManager(EntityManager em, ILogger<ActionManager> logger) : La
   public static Type[] ActionMapEntity => [typeof(SystemComponent), typeof(LarkMapComponent)];
   public static string DefaultMap => "Default";
 
+  public override Task Init() {
+    em.AddEntity(new MetadataComponent("ActionMap"), new SystemComponent(), new LarkMapComponent(DefaultMap, true, []));
+
+    return Task.CompletedTask;
+  }
+
   public void CreateActionMap(string mapName) {
     var (id, _) = em.GetEntity(ActionMapEntity);
     em.AddEntityComponent(id, new LarkMapComponent(mapName, false, []));
@@ -108,8 +114,8 @@ public class ActionManager(EntityManager em, ILogger<ActionManager> logger) : La
     });
   }
 
-  public async Task UpdateAsync() {
-    await foreach (var entity in em.GetEntitiesWithComponents(typeof(ActionComponent), typeof(MetadataComponent))) {
+  public Task UpdateAsync() {
+    foreach (var entity in em.GetEntitiesWithComponentsSync(typeof(ActionComponent), typeof(MetadataComponent))) {
       var (key, components) = entity;
       var name = components.Get<MetadataComponent>().Name;
       var (_, mapComponents) = em.GetEntity(ActionMapEntity);
@@ -154,6 +160,8 @@ public class ActionManager(EntityManager em, ILogger<ActionManager> logger) : La
         }
       }
     }
+
+    return Task.CompletedTask;
   }
 }
 

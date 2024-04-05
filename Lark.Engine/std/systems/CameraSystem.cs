@@ -8,20 +8,21 @@ using Silk.NET.Maths;
 namespace Lark.Engine.std;
 
 
-public class CameraSystem(EntityManager em, LarkVulkanData data) : LarkSystem {
-  public override Type[] RequiredComponents => [typeof(MetadataComponent), typeof(TransformComponent), typeof(CameraComponent)];
+public class CameraSystem(EntityManager em, LarkVulkanData data) : LarkSystem, ILarkSystemAfterUpdate {
+  public override Type[] RequiredComponents => [typeof(MetadataComponent), typeof(GlobalTransformComponent), typeof(CameraComponent)];
 
   private Dictionary<Guid, LarkCamera> cameraLookup = new();
 
 
 
-  public override void AfterUpdate() {
+  public async void AfterUpdate() {
     data.cameras = cameraLookup;
+    await Task.CompletedTask;
   }
 
   public override void Update((Guid, FrozenSet<ILarkComponent>) Entity) {
     var (key, components) = Entity;
-    var (metadata, transform, camera) = components.Get<MetadataComponent, TransformComponent, CameraComponent>();
+    var (metadata, transform, camera) = components.Get<MetadataComponent, GlobalTransformComponent, CameraComponent>();
 
     if (!cameraLookup.ContainsKey(key)) {
       cameraLookup.Add(key, LarkCamera.DefaultCamera());
@@ -42,7 +43,7 @@ public class CameraSystem(EntityManager em, LarkVulkanData data) : LarkSystem {
       Far = camera.Far,
       Near = camera.Near,
       Fov = camera.Fov,
-      Transform = new LarkTransform(transform)
+      Transform = new LarkTransform(transform.Position.ToGeneric(), transform.Rotation.ToGeneric(), transform.Scale.ToGeneric()),
     };
 
     cameraLookup[key] = newCamera;

@@ -12,10 +12,10 @@ using SkiaSharp;
 
 namespace Lark.Engine.std;
 
-public class RenderSystem(ILogger<RenderSystem> logger, EntityManager em, TimeManager tm, LarkVulkanData data, ModelUtils modelUtils) : LarkSystem {
-  public override Type[] RequiredComponents => new Type[] { typeof(MeshComponent), typeof(MetadataComponent), typeof(TransformComponent) };
+public class RenderSystem(ILogger<RenderSystem> logger, EntityManager em, TimeManager tm, LarkVulkanData data, ModelUtils modelUtils) : LarkSystem, ILarkSystemInit {
+  public override Type[] RequiredComponents => [typeof(MeshComponent), typeof(MetadataComponent), typeof(GlobalTransformComponent)];
 
-  public override Task Init() {
+  public Task Init() {
 
     return Task.CompletedTask;
   }
@@ -26,7 +26,7 @@ public class RenderSystem(ILogger<RenderSystem> logger, EntityManager em, TimeMa
   public override void Update((Guid, FrozenSet<ILarkComponent>) Entity) {
     var (key, components) = Entity;
 
-    var transform = components.Get<TransformComponent>();
+    var transform = components.Get<GlobalTransformComponent>();
     if (!entityToInstance.ContainsKey(key)) {
       CreateInstance(Entity);
     }
@@ -69,7 +69,7 @@ public class RenderSystem(ILogger<RenderSystem> logger, EntityManager em, TimeMa
 
     var metadata = components.Get<MetadataComponent>();
     var mesh = components.Get<MeshComponent>();
-    var transform = components.Get<TransformComponent>();
+    var transform = components.Get<GlobalTransformComponent>();
 
     var modelKey = LoadModel(mesh.Path);
 

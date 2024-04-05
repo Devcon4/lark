@@ -6,10 +6,10 @@ using Lark.Game.components;
 
 namespace Lark.Game.systems;
 
-public class PhysicsSystem(EntityManager em, TimeManager tm) : LarkSystem {
+public class PhysicsSystem(EntityManager em, TimeManager tm) : LarkSystem, ILarkSystemInit {
   public override Type[] RequiredComponents => new Type[] { typeof(Engine.std.TransformComponent), typeof(ForceComponent) };
 
-  public override Task Init() {
+  public Task Init() {
     // var start = new TransformComponent(new(10, 0, 0), Vector3.One, Quaternion.Identity);
     // var initForce = new ForceComponent(new(0.01f, 0, 0));
 

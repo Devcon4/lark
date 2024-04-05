@@ -24,8 +24,6 @@ public class InputManager(ILogger<InputManager> logger, LarkWindow window, Entit
       new CurrentCursorInputComponent(),
       new CurrentScrollInputComponent());
 
-    em.AddEntity(new MetadataComponent("ActionMap"), new SystemComponent(), new LarkMapComponent(ActionManager.DefaultMap, true, []));
-
     window.SetKeyCallback(KeyCallbackAction);
     window.SetMouseButtonCallback(MouseButtonCallbackAction);
     window.SetCursorPosCallback(CursorPosCallbackAction);
@@ -43,7 +41,14 @@ public class InputManager(ILogger<InputManager> logger, LarkWindow window, Entit
     var pressedKeyInput = components.Get<CurrentKeysInputComponent>();
     List<LarkKeyEvent> keyEvents = pressedKeyInput.Events.ToList();
 
-    keyEvents.Add(new LarkKeyEvent((LarkKeys)key, (LarkInputAction)action, (LarkKeyModifiers)mods));
+    var newEvent = new LarkKeyEvent((LarkKeys)key, (LarkInputAction)action, (LarkKeyModifiers)mods);
+
+    // should already be null but just in case.
+    if (mods is 0) {
+      newEvent = newEvent with { Mods = null };
+    }
+
+    keyEvents.Add(newEvent);
 
     var newInput = new CurrentKeysInputComponent() with {
       Events = keyEvents.ToFrozenSet()
@@ -59,7 +64,14 @@ public class InputManager(ILogger<InputManager> logger, LarkWindow window, Entit
 
     var mouseEvents = currentInput.Events.ToList();
 
-    mouseEvents.Add(new LarkMouseEvent((LarkMouseButton)button, (LarkInputAction)action, (LarkKeyModifiers)mods));
+    var newEvent = new LarkMouseEvent((LarkMouseButton)button, (LarkInputAction)action, (LarkKeyModifiers)mods);
+
+    // callback for mouse is setting mods to zero rather than null. Fix to make it null.
+    if (mods is 0) {
+      newEvent = newEvent with { Mods = null };
+    }
+
+    mouseEvents.Add(newEvent);
 
     var newInput = currentInput with {
       Events = mouseEvents.ToFrozenSet()

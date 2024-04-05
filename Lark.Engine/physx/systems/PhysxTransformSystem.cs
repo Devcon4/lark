@@ -7,7 +7,7 @@ using Lark.Engine.std;
 
 namespace Lark.Engine.physx.systems;
 
-public class PhysxTransformSystem(EntityManager em, PhysxManager pm, PhysxColliderManager pcm) : LarkSystem {
+public class PhysxTransformSystem(EntityManager em, PhysxManager pm, PhysxColliderManager pcm) : LarkSystem, ILarkSystemAfterUpdate {
   public override Type[] RequiredComponents => [typeof(TransformComponent)];
 
   public override void Update((Guid, FrozenSet<ILarkComponent>) Entity) {
@@ -40,26 +40,26 @@ public class PhysxTransformSystem(EntityManager em, PhysxManager pm, PhysxCollid
     em.UpdateEntityComponent(id, newTransform);
   }
 
-  public override async void AfterUpdate() {
+  public async void AfterUpdate() {
     // cleanup actors which have been deleted
 
     var entities = em.GetEntityIdsWithComponents(typeof(LarkPhysxMarker));
 
     // delete actors which are not in the list
-    foreach (var (id, actorId) in pm.EntityToActor) {
+    foreach (var (id, _) in pm.EntityToActor) {
       if (!entities.Contains(id)) {
-        pm.DeleteActor(actorId);
+        pm.DeleteActor(id);
         continue;
       }
 
       // If transform was updated outside of the physx system, update the actor transform.
-      var (pos, rot) = pm.GetActorTransform(actorId);
-      var (_, components) = em.GetEntity(id);
-      var transform = components.Get<TransformComponent>();
-      if (transform.Position != pos || transform.Rotation != rot) {
-        // TODO: Fix this, throws threading error.
-        // pm.UpdateActorTransform(actorId, transform.Position, transform.Rotation);
-      }
+      // var (pos, rot) = pm.GetActorTransform(actorId);
+      // var (_, components) = em.GetEntity(id);
+      // var transform = components.Get<TransformComponent>();
+      // if (transform.Position != pos || transform.Rotation != rot) {
+      // TODO: Fix this, throws threading error.
+      // pm.UpdateActorTransform(actorId, transform.Position, transform.Rotation);
+      // }
     }
 
     await Task.CompletedTask;

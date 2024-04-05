@@ -9,10 +9,10 @@ namespace Lark.Engine.ecs;
 
 public class EntityManager(ILogger<EntityManager> logger) : LarkManager {
 
-  private Dictionary<Guid, FrozenSet<ILarkComponent>> entities = new();
-  private Dictionary<Guid, FrozenSet<Type>> entityComponents = new();
+  private ConcurrentDictionary<Guid, FrozenSet<ILarkComponent>> entities = new();
+  private ConcurrentDictionary<Guid, FrozenSet<Type>> entityComponents = new();
 
-  private Dictionary<Type, HashSet<Guid>> entitiesByComponentType = new();
+  private ConcurrentDictionary<Type, HashSet<Guid>> entitiesByComponentType = new();
 
   public Guid AddEntity(params ILarkComponent[] components) {
     Guid key = Guid.NewGuid();
@@ -48,7 +48,7 @@ public class EntityManager(ILogger<EntityManager> logger) : LarkManager {
     return key;
   }
 
-  // GetTotalNumberOfEntities
+  // GetTotalNumberOfEntities 
   public int GetEntitiesCount() {
     return entities.Count;
   }
@@ -88,22 +88,62 @@ public class EntityManager(ILogger<EntityManager> logger) : LarkManager {
   //   return entitiesWithComponents.ToFrozenSet();
   // }
 
-  public async IAsyncEnumerable<ValueTuple<Guid, FrozenSet<ILarkComponent>>> GetEntitiesWithComponents(params Type[] componentTypes) {
+  public IEnumerable<ValueTuple<Guid, FrozenSet<ILarkComponent>>> GetEntitiesWithComponentsSync(params Type[] componentTypes) {
+    var hasGeneric = componentTypes.Any(t => t.IsGenericType);
     foreach (var (key, components) in entities) {
-      if (entityComponents[key].IsSupersetOf(componentTypes)) {
-        yield return new(key, components);
+
+      if (!hasGeneric) {
+        if (entityComponents[key].IsSupersetOf(componentTypes)) {
+          yield return new(key, components);
+        }
+      }
+
+      // If componentTypes has any generic types, we need to check the inheritance chain.
+      if (hasGeneric) {
+        foreach (var componentType in componentTypes) {
+          if (componentType.IsGenericType) {
+            // EntityCompoents will have full type records like Typeof(CastAbility<HeroMainAttack>), typeof(CastAbility<HeroAltAttack>), etc. In this example if we are looking for CastAbility<>, we need to check for all types that inherit from CastAbility<>.
+            if (entityComponents[key].Any(t => t.IsGenericType && (t.GetGenericTypeDefinition() == componentType || t.IsAssignableFrom(componentType)))) {
+              yield return new(key, components);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  public async IAsyncEnumerable<ValueTuple<Guid, FrozenSet<ILarkComponent>>> GetEntitiesWithComponents(params Type[] componentTypes) {
+    var hasGeneric = componentTypes.Any(t => t.IsGenericType);
+    foreach (var (key, components) in entities) {
+
+      if (!hasGeneric) {
+        if (entityComponents[key].IsSupersetOf(componentTypes)) {
+          yield return new(key, components);
+        }
+      }
+
+      // If componentTypes has any generic types, we need to check the inheritance chain.
+      if (hasGeneric) {
+        foreach (var componentType in componentTypes) {
+          if (componentType.IsGenericType) {
+            // EntityCompoents will have full type records like Typeof(CastAbility<HeroMainAttack>), typeof(CastAbility<HeroAltAttack>), etc. In this example if we are looking for CastAbility<>, we need to check for all types that inherit from CastAbility<>.
+            if (entityComponents[key].Any(t => t.IsGenericType && (t.GetGenericTypeDefinition() == componentType || t.IsAssignableFrom(componentType)))) {
+              yield return new(key, components);
+            }
+          }
+        }
       }
     }
     await Task.CompletedTask;
   }
 
-  public IEnumerable<ValueTuple<Guid, FrozenSet<ILarkComponent>>> GetEntitiesWithComponentsSync(params Type[] componentTypes) {
-    foreach (var (key, components) in entities) {
-      if (entityComponents[key].IsSupersetOf(componentTypes)) {
-        yield return new(key, components);
-      }
-    }
-  }
+  // public IEnumerable<ValueTuple<Guid, FrozenSet<ILarkComponent>>> GetEntitiesWithComponentsSync(params Type[] componentTypes) {
+  //   foreach (var (key, components) in entities) {
+  //     if (entityComponents[key].IsSupersetOf(componentTypes)) {
+  //       yield return new(key, components);
+  //     }
+  //   }
+  // }
 
   // GetEntityIdsWithComponents: Get the ids of all entities that have all of the specified components.
   public IEnumerable<Guid> GetEntityIdsWithComponents(params Type[] componentTypes) {
@@ -134,8 +174,8 @@ public class EntityManager(ILogger<EntityManager> logger) : LarkManager {
       var componentType = component.GetType();
       entitiesByComponentType[componentType].Remove(key);
     }
-    entityComponents.Remove(key);
-    entities.Remove(key);
+    entityComponents.TryRemove(key, out _);
+    entities.TryRemove(key, out _);
   }
 
   public void UpdateEntityComponent<TComp>(Guid key, TComp component) where TComp : ILarkComponent {
@@ -189,9 +229,10 @@ public class EntityManager(ILogger<EntityManager> logger) : LarkManager {
       throw new Exception("Entity does not exist");
     }
 
-    var componentType = typeof(TComp);
+    // Use GetType rather than typeof(TComp) to handle generic types.
+    var componentType = component.GetType();
     if (!entitiesByComponentType.TryGetValue(componentType, out var entitySet)) {
-      entitiesByComponentType.Add(componentType, []);
+      entitiesByComponentType.TryAdd(componentType, []);
     }
 
     entitiesByComponentType[componentType].Add(key);

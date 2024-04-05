@@ -27,7 +27,7 @@ public interface ILarkSystemInit {
   public abstract Task Init();
 }
 
-public interface ILarkSystem : ILarkSystemBeforeUpdate, ILarkSystemAfterUpdate, ILarkSystemInit {
+public interface ILarkSystem {
   public abstract Type[] RequiredComponents { get; }
   public abstract void Update(ValueTuple<Guid, FrozenSet<ILarkComponent>> Entity);
 }
@@ -48,18 +48,8 @@ public abstract class LarkSystem : ILarkSystem, ILarkSyncSystem {
   // public void EnqueueJob(ValueTuple<Guid, HashSet<ILarkComponent>> job) => _jobQueue.Enqueue(job);
 
   // Called for each entity with RequiredComponents every frame
-  public abstract void Update(ValueTuple<Guid, FrozenSet<ILarkComponent>> Entity);
+  public virtual void Update(ValueTuple<Guid, FrozenSet<ILarkComponent>> Entity) { }
 
-  // Called once at application start
-  public virtual Task Init() { return Task.CompletedTask; }
-
-  // Optional overrides
-
-  // Called once per frame after all entities have been updated
-  public virtual void AfterUpdate() { }
-
-  // Called once per frame before any entities have been updated
-  public virtual void BeforeUpdate() { }
 }
 
 

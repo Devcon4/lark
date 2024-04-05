@@ -4,7 +4,25 @@ using System.Numerics;
 namespace Lark.Engine.std;
 
 public static partial class LarkUtils {
-  // Create LookAt
+
+  // public static Vector3 QuaternionToEuler(Quaternion q) {
+  //   // Pitch is up/down, yaw is left/right, roll is tilt
+
+
+  //   // Store the Euler angles in degrees
+  //   Vector3 pitchYawRoll = new Vector3();
+
+  //   var Θ = Math.Acos(q.W) * 2;
+
+  //   pitchYawRoll.X = (float)(q.X / Math.Sin(Math.Acos(Θ)));
+  //   pitchYawRoll.Y = (float)(q.Y / Math.Sin(Math.Acos(Θ)));
+  //   pitchYawRoll.Z = (float)(q.Z / Math.Sin(Math.Acos(Θ)));
+
+  //   pitchYawRoll *= 180f / (float)Math.PI;
+
+  //   return pitchYawRoll;
+  // }
+
 
   // CreateFromYawPitchRollDegree using degrees
   public static Quaternion CreateFromYawPitchRoll(float yaw, float pitch, float roll) {

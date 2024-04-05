@@ -66,7 +66,7 @@ public class UniformBufferSegment(LarkVulkanData data, LarkWindow larkWindow, Bu
     var uboData = new UniformBufferObject {
       view = camera.View.ToGeneric(),
       proj = camera.Projection.ToGeneric(),
-      lightPos = new Vector3D<float>(10, 10, 15),
+      lightPos = new Vector3D<float>(0, -10, 0),
       viewPos = camera.Transform.Translation
     };
 

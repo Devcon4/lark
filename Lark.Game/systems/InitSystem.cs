@@ -7,13 +7,14 @@ using Lark.Engine.ecs;
 using Lark.Engine.physx.systems;
 using Lark.Engine.std;
 using Lark.Game.components;
+using Lark.Game.managers;
 using Microsoft.Extensions.Logging;
 using Silk.NET.GLFW;
 using Silk.NET.Input;
 
 namespace Lark.Game.systems;
 
-public class InitSystem(EntityManager em, TimeManager tm, ActionManager am, InputManager im, ShutdownManager sm, CameraManager cm, LarkWindow window, ILogger<InitSystem> logger) : LarkSystem {
+public class InitSystem(EntityManager em, TimeManager tm, ActionManager am, InputManager im, ShutdownManager sm, CameraManager cm, LarkWindow window, ILogger<InitSystem> logger) : LarkSystem, ILarkSystemInit {
   public override Type[] RequiredComponents => [typeof(TransformComponent), typeof(CameraComponent)];
 
   public Stopwatch sw = new();
@@ -101,7 +102,7 @@ public class InitSystem(EntityManager em, TimeManager tm, ActionManager am, Inpu
     };
   }
 
-  public override Task Init() {
+  public Task Init() {
     // Disable cursor so it locks to the center of the window.
     window.SetCursorMode(CursorModeValue.CursorDisabled, true);
     var start = new TransformComponent(new(10, 0, 0), Vector3.One, Quaternion.Identity);
@@ -116,7 +117,6 @@ public class InitSystem(EntityManager em, TimeManager tm, ActionManager am, Inpu
     am.AddActionToMap(ActionManager.DefaultMap, "MoveBackward", new LarkKeyTrigger(LarkKeys.S));
     am.AddActionToMap(ActionManager.DefaultMap, "MoveLeft", new LarkKeyTrigger(LarkKeys.A));
     am.AddActionToMap(ActionManager.DefaultMap, "MoveRight", new LarkKeyTrigger(LarkKeys.D));
-    am.AddActionToMap(ActionManager.DefaultMap, "LookAt", new LarkCursorTrigger());
     am.AddActionToMap(ActionManager.DefaultMap, "Exit", new LarkKeyTrigger(LarkKeys.Escape));
     am.AddActionToMap(ActionManager.DefaultMap, "Jump", new LarkKeyTrigger(LarkKeys.Space));
 

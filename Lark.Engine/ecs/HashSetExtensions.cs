@@ -1,17 +1,26 @@
 using System.Collections.Frozen;
 using System.Collections.Immutable;
+using Lark.Engine.std;
 
 namespace Lark.Engine.ecs;
 
 public static class HashSetExtensions {
 
   // GetList: Get all components of a type
-  public static ImmutableList<TComponent> GetList<TComponent>(this FrozenSet<ILarkComponent> hashSet) where TComponent : struct {
-    return hashSet.Where(c => c.GetType() == typeof(TComponent)).Select(c => (TComponent)c).ToImmutableList();
+  public static ImmutableList<TComponent> GetList<TComponent>(this FrozenSet<ILarkComponent> hashSet) where TComponent : ILarkComponent {
+    return hashSet.Where(c => c.GetType() == typeof(TComponent) || c.GetType().IsSubclassOf(typeof(TComponent)) || typeof(TComponent).IsInterface && typeof(TComponent).IsAssignableFrom(c.GetType())).Select(c => (TComponent)c).ToImmutableList();
   }
 
-  public static TComponent Get<TComponent>(this FrozenSet<ILarkComponent> hashSet) where TComponent : struct {
-    return (TComponent)hashSet.First(c => c.GetType() == typeof(TComponent));
+  public static ImmutableList<dynamic> GetList<TComponent>(this FrozenSet<ILarkComponent> hashSet, Type type) where TComponent : ILarkComponent {
+    return hashSet.Where(c => c.GetType() == type || c.GetType().IsGenericType && (c.GetType().GetGenericTypeDefinition() == type || c.GetType().GetGenericTypeDefinition().IsAssignableFrom(type))).Select(c => (dynamic)c).ToImmutableList();
+  }
+
+  public static TComponent Get<TComponent>(this FrozenSet<ILarkComponent> hashSet) where TComponent : ILarkComponent {
+    return (TComponent)hashSet.First(c => c.GetType() == typeof(TComponent) || c.GetType().IsSubclassOf(typeof(TComponent)) || typeof(TComponent).IsInterface && typeof(TComponent).IsAssignableFrom(c.GetType()));
+  }
+
+  public static dynamic Get<TComponent>(this FrozenSet<ILarkComponent> hashSet, Type type) where TComponent : ILarkComponent {
+    return hashSet.First(c => c.GetType() == type || c.GetType().IsGenericType && (c.GetType().GetGenericTypeDefinition() == type || c.GetType().GetGenericTypeDefinition().IsAssignableFrom(type)));
   }
 
   // TryGet: Get a component of a type, return bool, out TComponent

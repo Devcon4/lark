@@ -7,6 +7,7 @@ using Lark.Engine.std;
 using Lark.Engine.std.systems;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using NodaTime;
 
 namespace Lark.Engine;
 public static class ServiceConfiguration {
@@ -38,7 +39,7 @@ public static class ServiceConfiguration {
     services.AddLarkManager<PhysxColliderManager>();
     services.AddLarkManager<PhysxCharacterManager>();
 
-    services.AddLarkSystem<PhysxWorldSystem>();
+    // services.AddLarkSystem<PhysxWorldSystem>();
 
     services.AddLarkSystem<PhysxPlaneSystem>();
     services.AddLarkSystem<PhysxBoxSystem>();
@@ -70,12 +71,16 @@ public static class ServiceConfiguration {
     services.AddLarkSystem<CameraSystem>();
     services.AddLarkSystem<InputSystem>();
     services.AddLarkSystem<CurrentKeySystem>();
+    services.AddLarkSystem<SceneGraphSystem>();
+    services.AddLarkSystem<GlobalTransformSystem>();
 
+    services.AddSingleton<IClock>(SystemClock.Instance);
     services.AddLarkManager<TimeManager>();
-    services.AddLarkManager<InputManager>();
     services.AddLarkManager<ActionManager>();
+    services.AddLarkManager<InputManager>();
     services.AddLarkManager<ShutdownManager>();
     services.AddLarkManager<CameraManager>();
+    services.AddLarkManager<SceneGraphManager>();
 
     services.AddLarkModule<ActionModule>();
 

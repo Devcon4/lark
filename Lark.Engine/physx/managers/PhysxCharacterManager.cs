@@ -76,7 +76,7 @@ public class PhysxCharacterManager(ILogger<PhysxCharacterManager> Logger, PhysxD
   }
 
   // move
-  public unsafe void Move(Guid entityId, Vector3 displacement, float elapsedTime, float minDistance = 0.0001f) {
+  public unsafe void Move(Guid entityId, Vector3 displacement, float elapsedTime) {
     if (!EntityToController.TryGetValue(entityId, out var controllerId)) {
       throw new Exception($"Entity {entityId} does not have a controller");
     }
@@ -89,6 +89,7 @@ public class PhysxCharacterManager(ILogger<PhysxCharacterManager> Logger, PhysxD
     // controller.Controller->MoveMut(&dis, minDistance, elapsedTime, controller.Filters, null);
     PxController_move_mut(controller.Controller, &dis, float.Epsilon, elapsedTime, controller.Filters, null);
   }
+
 }
 
 public unsafe class LarkPhsyxController(PxController* Controller, PxControllerFilters* Filters) {

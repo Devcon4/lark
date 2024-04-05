@@ -9,3 +9,7 @@ public record struct TransformComponent(Vector3 Position, Vector3 Scale, Quatern
   // Identity
   public static TransformComponent Identity => new(Vector3.Zero, Vector3.One, Quaternion.Identity);
 }
+
+public record struct GlobalTransformComponent(Vector3 Position, Vector3 Scale, Quaternion Rotation) : ILarkComponent {
+  public GlobalTransformComponent() : this(Vector3.Zero, Vector3.One, Quaternion.Identity) { }
+}

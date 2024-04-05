@@ -70,9 +70,8 @@ public struct LarkCamera {
 
   public readonly Matrix4x4 View {
     get {
-      var translation = Matrix4x4.CreateTranslation(-Transform.Translation.ToSystem());
-      var rotation = Matrix4x4.Transpose(Matrix4x4.CreateFromQuaternion(Transform.Rotation.ToSystem()));
-      return rotation * translation;
+      var view = Matrix4x4.CreateTranslation(-Transform.Translation.ToSystem()) * Matrix4x4.CreateFromQuaternion(Transform.Rotation.ToSystem());
+      return view;
     }
   }
   public readonly Matrix4x4 Projection {
@@ -104,13 +103,29 @@ public struct LarkCamera {
   public Matrix4x4 ScreenToWorld => ScreenToView * InvertView * InvertProjection * Transform.ToInverseMatrix().ToSystem();
   public Matrix4x4 WorldToScreen => Transform.ToMatrix().ToSystem() * Projection * View * ViewToScreen;
 
-  public Vector3 ProjectTo(Vector2 screenPosition, float zDepth) {
-    var p = new Vector4(screenPosition.X, screenPosition.Y, 1, zDepth);
+  public Vector3 ProjectToOld(Vector2 screenPosition, float zDepth) {
+    var p = new Vector4(screenPosition.X, screenPosition.Y, zDepth, 1);
     var matrix = ScreenToView * InvertView * InvertProjection * Transform.ToInverseMatrix().ToSystem();
     var result = Vector4.Transform(p, matrix);
     result /= result.W;
     var final = new Vector3(-result.X, -result.Y, -result.Z);
     return final;
+  }
+
+  public Vector3 ProjectTo(Vector2 screenPosition, float zDepth) {
+
+    var p = new Vector4(screenPosition.X, screenPosition.Y, zDepth, 1);
+    var ndcPos = Vector4.Transform(p, ScreenToView);
+    var cameraPos = Vector4.Transform(ndcPos, InvertProjection);
+    var worldPos = Vector4.Transform(cameraPos, InvertView);
+    var objectPos = Vector4.Transform(worldPos, Transform.ToMatrix().ToSystem());
+    objectPos /= objectPos.W;
+    return new Vector3(objectPos.X, objectPos.Y, objectPos.Z);
+    // var matrix = ScreenToView * InvertView * InvertProjection * Transform.ToInverseMatrix().ToSystem();
+    // var result = Vector4.Transform(p, matrix);
+    // result /= result.W;
+    // var final = new Vector3(-result.X, -result.Y, -result.Z);
+    // return final;
   }
 
   public Vector3 ProjectToNear(Vector2 screenPosition) => ProjectTo(screenPosition, Near);

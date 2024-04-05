@@ -84,6 +84,14 @@ public static class CurveUtils {
     new(1, 1, 1)
   );
 
+  // LinearForward; Curve that represents a linear interpolation from the start to the end only in the forward direction
+  public static ILarkCurve LinearForward => new LarkCubicBezier(
+    new(),
+    new(),
+    new(0, 0, 1),
+    new(0, 0, 1)
+  );
+
   public static ILarkCurve LinearJump => new LarkCubicBezier(
     new(),
     new(0, -1, 0),
@@ -119,7 +127,7 @@ public static class CurveUtils {
     new(1, 1, 1)
   );
 
-  // SlertXZ; Slerp but only in the XZ plane
+  // SlerpXZ; Slerp but only in the XZ plane
   public static ILarkCurve SlerpXZ => new LarkSlerp(
     new(0, 0, 0),
     new(1, 0, 1)

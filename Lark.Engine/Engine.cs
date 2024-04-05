@@ -72,6 +72,10 @@ public partial class Engine(LarkWindow larkWindow, IEnumerable<ILarkModule> modu
       logger.LogInformation("Initializing manager {manager}", manager.GetType().Name);
       manager.Init().Wait();
     }
+
+    foreach (var manager in managers) {
+      manager.AfterInit().Wait();
+    }
   }
 
   public void Cleanup() {

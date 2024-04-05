@@ -5,6 +5,8 @@ using MagicPhysX;
 using static MagicPhysX.NativeMethods;
 using Lark.Engine.std;
 using Lark.Engine.ecs;
+using System.Runtime.InteropServices;
+using System.Runtime.CompilerServices;
 
 namespace Lark.Engine.physx.managers;
 
@@ -64,7 +66,7 @@ public class PhysxColliderManager(ILogger<PhysxColliderManager> logger, PhysxMan
     physxData.Scene->AddActorMut(larkActor.Actor, null);
 
     var guid = Guid.NewGuid();
-    pm.ActorLookup.Add(guid, larkActor);
+    pm.ActorLookup.TryAdd(guid, larkActor);
     return guid;
   }
 
@@ -92,7 +94,7 @@ public class PhysxColliderManager(ILogger<PhysxColliderManager> logger, PhysxMan
     physxData.Scene->AddActorMut(larkActor.Actor, null);
 
     var guid = Guid.NewGuid();
-    pm.ActorLookup.Add(guid, larkActor);
+    pm.ActorLookup.TryAdd(guid, larkActor);
     return guid;
   }
 
@@ -120,7 +122,7 @@ public class PhysxColliderManager(ILogger<PhysxColliderManager> logger, PhysxMan
     physxData.Scene->AddActorMut(larkActor.Actor, null);
 
     var guid = Guid.NewGuid();
-    pm.ActorLookup.Add(guid, larkActor);
+    pm.ActorLookup.TryAdd(guid, larkActor);
     return guid;
   }
 
@@ -148,7 +150,92 @@ public class PhysxColliderManager(ILogger<PhysxColliderManager> logger, PhysxMan
     physxData.Scene->AddActorMut(larkActor.Actor, null);
 
     var guid = Guid.NewGuid();
-    pm.ActorLookup.Add(guid, larkActor);
+    pm.ActorLookup.TryAdd(guid, larkActor);
     return guid;
+  }
+
+  public unsafe bool Overlay(out List<Guid> hits, Guid actorId, Vector3 position, Quaternion rotation, PxQueryFilterData? filterData = null) {
+    if (!pm.ActorLookup.TryGetValue(actorId, out var actor)) {
+      throw new Exception($"Actor {actorId} does not exist");
+    }
+
+    hits = [];
+
+    var p = new PxVec3 { x = position.X, y = position.Y, z = position.Z };
+    var q = new PxQuat { x = rotation.X, y = rotation.Y, z = rotation.Z, w = rotation.W };
+    var transform = PxTransform_new_5(&p, &q);
+    var shapeCount = PxRigidActor_getNbShapes((PxRigidActor*)actor.Actor);
+
+    PxShape** shapesBuf = (PxShape**)Marshal.AllocHGlobal((int)shapeCount * sizeof(PxShape*));
+
+    var num = PxRigidActor_getShapes((PxRigidActor*)actor.Actor, shapesBuf, (uint)(shapeCount * sizeof(PxShape)), 0);
+
+    var fData = PxFilterData_new(PxEMPTY.PxEmpty);
+    var filterQuery = PxQueryFilterData_new_1(&fData, PxQueryFlags.Static);
+
+    filterData ??= filterQuery;
+
+    using var filterDataBuf = new Memory<PxQueryFilterData>([filterData.Value]).Pin();
+    for (int i = 0; i < shapeCount; i++) {
+      var hit = new PxOverlapHit();
+
+      PxShape* ptr = (PxShape*)Marshal.ReadIntPtr((nint)shapesBuf, i * sizeof(PxShape*));
+
+      var currentGeo = PxShape_getGeometry(ptr);
+      var res = PxSceneQueryExt_overlapMultiple(physxData.Scene, currentGeo, &transform, &hit, (uint)sizeof(PxOverlapHit), (PxQueryFilterData*)filterDataBuf.Pointer, null);
+      if (res < 0) {
+        throw new Exception("Error in PxQueryExtOverlapMultiple:: buffer overflow");
+      }
+
+      if (res > 0) {
+        var hitActor = hit.actor;
+        for (int j = 0; j < res; j++) {
+          KeyValuePair<Guid, LarkPhysxActor>? found = pm.ActorLookup.FirstOrDefault(x => x.Value.Actor == hitActor);
+
+          if (found is null) {
+            throw new Exception("Actor not found in lookup");
+          }
+
+          hits.Add(found.Value.Key);
+        }
+      }
+    }
+
+    Marshal.FreeHGlobal((nint)shapesBuf);
+
+    return hits.Count != 0;
+  }
+
+  // Raycast
+  public unsafe bool Raycast(out Guid hit, Vector3 origin, Vector3 direction, float distance, PxQueryFilterData? filterData = null) {
+    hit = Guid.Empty;
+
+    var p = new PxVec3 { x = origin.X, y = origin.Y, z = origin.Z };
+    var d = new PxVec3 { x = direction.X, y = direction.Y, z = direction.Z };
+    var transform = PxTransform_new_1(&p);
+    var hitResult = new PxRaycastHit();
+
+    var fData = PxFilterData_new(PxEMPTY.PxEmpty);
+    var filterQuery = PxQueryFilterData_new_1(&fData, PxQueryFlags.Static);
+
+    filterData ??= filterQuery;
+
+    using var filterDataBuf = new Memory<PxQueryFilterData>([filterData.Value]).Pin();
+
+    var res = PxSceneQueryExt_raycastSingle(physxData.Scene, &p, &d, distance, PxHitFlags.Default, &hitResult, (PxQueryFilterData*)filterDataBuf.Pointer, null, null);
+
+    if (res) {
+      var hitActor = hitResult.actor;
+      KeyValuePair<Guid, LarkPhysxActor>? found = pm.ActorLookup.FirstOrDefault(x => x.Value.Actor == hitActor);
+
+      if (found is null) {
+        throw new Exception("Actor not found in lookup");
+      }
+
+      hit = found.Value.Key;
+      return true;
+    }
+
+    return false;
   }
 }

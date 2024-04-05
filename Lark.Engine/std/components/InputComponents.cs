@@ -17,6 +17,10 @@ public interface ILarkKeyInput : ILarkInput {
   public LarkKeyModifiers? Mods { get; init; }
 }
 
+public interface ILarkInputAction {
+  public LarkInputAction Action { get; init; }
+}
+
 public record struct LarkKeyTrigger : ILarkActionTrigger, ILarkKeyInput {
   public LarkKeys Key { get; init; }
   public LarkKeyModifiers? Mods { get; init; }
@@ -34,7 +38,7 @@ public record struct LarkKeyTrigger : ILarkActionTrigger, ILarkKeyInput {
   }
 }
 
-public record struct LarkKeyEvent(LarkKeys Key, LarkInputAction Action, LarkKeyModifiers? Mods = null) : ILarkKeyInput {
+public record struct LarkKeyEvent(LarkKeys Key, LarkInputAction Action, LarkKeyModifiers? Mods = null) : ILarkKeyInput, ILarkInputAction {
   public LarkKeys Key { get; init; } = Key;
   public LarkInputAction Action { get; init; } = Action;
   public LarkKeyModifiers? Mods { get; init; } = Mods;
@@ -52,11 +56,10 @@ public record struct CurrentKeysInputComponent() : ILarkComponent {
 // MouseButton
 public interface ILarkMouseInput : ILarkInput {
   public LarkMouseButton Button { get; init; }
-  public LarkInputAction Action { get; init; }
   public LarkKeyModifiers? Mods { get; init; }
 }
 
-public record struct LarkMouseEvent(LarkMouseButton Button, LarkInputAction Action, LarkKeyModifiers? Mods = null) : ILarkMouseInput {
+public record struct LarkMouseEvent(LarkMouseButton Button, LarkInputAction Action, LarkKeyModifiers? Mods = null) : ILarkMouseInput, ILarkInputAction {
   public LarkMouseButton Button { get; init; } = Button;
   public LarkInputAction Action { get; init; } = Action;
   public LarkKeyModifiers? Mods { get; init; } = Mods;
@@ -64,12 +67,16 @@ public record struct LarkMouseEvent(LarkMouseButton Button, LarkInputAction Acti
 
 public record struct LarkMouseTrigger : ILarkActionTrigger, ILarkMouseInput {
   public LarkMouseButton Button { get; init; }
-  public LarkInputAction Action { get; init; }
   public LarkKeyModifiers? Mods { get; init; }
+
+  public LarkMouseTrigger(LarkMouseButton button, LarkKeyModifiers? mods = null) {
+    Button = button;
+    Mods = mods;
+  }
 
   public bool Check(ILarkInput input) {
     if (input is not ILarkMouseInput mouseInput) return false;
-    return mouseInput.Button == Button && mouseInput.Action == Action && mouseInput.Mods == Mods;
+    return mouseInput.Button == Button && mouseInput.Mods == Mods;
   }
 }
 
@@ -86,8 +93,8 @@ public record struct LarkCursorTrigger : ILarkActionTrigger, ILarkCursorInput {
   public Vector2 Position { get; init; }
 
   public bool Check(ILarkInput input) {
-    if (input is not ILarkCursorInput cursorAction) return false;
-    return true;
+    if (input is ILarkCursorInput cursorAction) return true;
+    return false;
   }
 }
 

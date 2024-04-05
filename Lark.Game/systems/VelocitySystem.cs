@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Lark.Game.systems;
 
-public class VelocitySystem(EntityManager em, ILogger<VelocitySystem> logger) : LarkSystem {
+public class VelocitySystem(EntityManager em, ILogger<VelocitySystem> logger) : LarkSystem, ILarkSystemAfterUpdate {
   public override Type[] RequiredComponents => [typeof(VelocityOldComponent), typeof(TransformComponent)];
 
   public override void Update((Guid, FrozenSet<ILarkComponent>) Entity) {
@@ -20,7 +20,7 @@ public class VelocitySystem(EntityManager em, ILogger<VelocitySystem> logger) : 
     em.UpdateEntityComponent(key, newTransform);
   }
 
-  public override async void AfterUpdate() {
+  public async void AfterUpdate() {
     // Clear the velocity of all entities
     await foreach (var (key, components) in em.GetEntitiesWithComponents([typeof(VelocityOldComponent)])) {
       em.UpdateEntityComponent(key, new VelocityOldComponent());

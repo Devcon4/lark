@@ -9,7 +9,7 @@ public record struct InputEntityMarker : ILarkComponent { }
 
 public record struct ActionComponent(ActionName ActionName, Action<ValueTuple<Guid, FrozenSet<ILarkComponent>>, FrozenSet<ILarkInput>> Callback) : ILarkComponent { }
 
-public class InputSystem(EntityManager em, ILogger<InputSystem> logger) : LarkSystem {
+public class InputSystem(EntityManager em, ILogger<InputSystem> logger) : LarkSystem, ILarkSystemAfterUpdate {
   public override Type[] RequiredComponents => [
     typeof(SystemComponent),
     typeof(InputEntityMarker)
@@ -17,7 +17,7 @@ public class InputSystem(EntityManager em, ILogger<InputSystem> logger) : LarkSy
 
   public override void Update((Guid, FrozenSet<ILarkComponent>) Entity) { }
 
-  public override void AfterUpdate() {
+  public void AfterUpdate() {
     var (key, components) = em.GetEntity(InputManager.InputEntity);
 
     // Get keyInput.Events. For all pressed key, update them to held events. For all released keys, remove matching held events.
@@ -48,7 +48,27 @@ public class InputSystem(EntityManager em, ILogger<InputSystem> logger) : LarkSy
 
     em.UpdateEntityComponent(key, new CurrentKeysInputComponent() with { Events = newEvents.ToFrozenSet() });
 
-    em.UpdateEntityComponent(key, new CurrentMouseInputComponent());
+    // Get mouseInput.Events. For all pressed mouse buttons, update them to held events. For all released mouse buttons, remove matching held events.
+    var mouseInput = components.Get<CurrentMouseInputComponent>();
+
+    FrozenSet<LarkMouseEvent> mouseEvents = mouseInput.Events;
+    List<LarkMouseEvent> newMouseEvents = [];
+
+    foreach (var e in mouseInput.Events) {
+      if (LarkUtils.IsMousePressed(mouseEvents, e.Button, e.Mods) && !LarkUtils.IsMouseReleased(mouseEvents, e.Button, e.Mods)) {
+        newMouseEvents.Add(e with { Action = LarkInputAction.Hold });
+        continue;
+      }
+
+      if (LarkUtils.IsMouseHeld(mouseEvents, e.Button, e.Mods) && !LarkUtils.IsMouseReleased(mouseEvents, e.Button, e.Mods)) {
+        newMouseEvents.Add(e);
+        continue;
+      }
+    }
+
+    var cursorInput = components.Get<CurrentCursorInputComponent>();
+
+    em.UpdateEntityComponent(key, new CurrentMouseInputComponent() with { Events = newMouseEvents.ToFrozenSet() });
     em.UpdateEntityComponent(key, new CurrentCursorInputComponent());
     em.UpdateEntityComponent(key, new CurrentScrollInputComponent());
   }
