@@ -12,11 +12,13 @@ using Silk.NET.Maths;
 
 namespace Lark.Engine;
 
-public class LarkWindow(ILogger<LarkWindow> logger, ShutdownManager shutdownManager) {
+public class LarkWindow(ILogger<LarkWindow> logger, IOptions<GameSettings> options, ShutdownManager shutdownManager) {
   private readonly Glfw _glfw = Glfw.GetApi();
   public unsafe WindowHandle* windowHandle = null!;
   public Vector2 ViewportSize => new(FramebufferSize.X, FramebufferSize.Y);
   public unsafe bool IsFocused => _glfw.GetWindowAttrib(windowHandle, WindowAttributeGetter.Focused);
+
+  private readonly GameSettings options = options.Value;
 
   public unsafe void Build() {
     logger.LogInformation("Building window... {thread}", Environment.CurrentManagedThreadId);
@@ -33,14 +35,18 @@ public class LarkWindow(ILogger<LarkWindow> logger, ShutdownManager shutdownMana
     _glfw.WindowHint(WindowHintBool.Visible, true);
     _glfw.WindowHint(WindowHintBool.CenterCursor, true);
     _glfw.WindowHint(WindowHintBool.FocusOnShow, true);
+    // Get the primary monitor.
+    var monitor = options.Fullscreen ? _glfw.GetPrimaryMonitor() : null;
+    // Get monitor resolution.
+    var mode = options.Fullscreen ? _glfw.GetVideoMode(monitor) : null;
+    var width = options.Fullscreen ? mode->Width : 800;
+    var height = options.Fullscreen ? mode->Height : 600;
 
-    windowHandle = _glfw.CreateWindow(800, 600, "Lark", null, null);
+    windowHandle = _glfw.CreateWindow(width, height, "Lark", monitor, null);
 
     if (windowHandle == null) {
       throw new Exception("Failed to create GLFW window");
     }
-
-    // _glfw.FocusWindow(windowHandle);
 
     _glfw.SetWindowCloseCallback(windowHandle, (window) => {
       OnClosing();
@@ -117,6 +123,7 @@ public class LarkWindow(ILogger<LarkWindow> logger, ShutdownManager shutdownMana
   }
 
   public unsafe void SetCursorMode(CursorModeValue cursorMode, bool raw = true) {
+    logger.LogInformation("Setting cursor mode to {cursorMode}", cursorMode);
     if (raw && cursorMode is not CursorModeValue.CursorDisabled) {
       throw new Exception("Raw mouse input is only supported when the cursor is disabled.");
     }

@@ -4,6 +4,8 @@ public class GameSettings {
   public bool VSync { get; set; } = false;
   public int? FPSLimit { get; set; } = null;
   public float MouseSensitivity { get; set; } = 1f;
+
+  public bool Fullscreen { get; set; } = false;
 }
 
 // public class LarkWindow(ILogger<LarkWindow> logger, IHostApplicationLifetime hostLifetime) {

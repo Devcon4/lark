@@ -25,8 +25,28 @@ public class PhysxCharacterManager(ILogger<PhysxCharacterManager> Logger, PhysxD
     controllerDesc->height = height;
     controllerDesc->upDirection = -Vector3.UnitY;
     controllerDesc->position = PxExtendedVec3_new_1(position.X, position.Y, position.Z);
+    controllerDesc->climbingMode = PxCapsuleClimbingMode.Easy;
+    controllerDesc->maxJumpHeight = 1f;
+    controllerDesc->stepOffset = 0.1f;
+
+    var boxControllerDesc = PxBoxControllerDesc_new_alloc();
+    boxControllerDesc->material = pm.GetMaterial(materialId.Value).Material;
+    boxControllerDesc->halfHeight = height / 2;
+    boxControllerDesc->halfSideExtent = radius;
+    boxControllerDesc->halfForwardExtent = radius;
+    boxControllerDesc->upDirection = -Vector3.UnitY;
+    boxControllerDesc->position = PxExtendedVec3_new_1(position.X, position.Y, position.Z);
+
+    var boxStatus = boxControllerDesc->IsValid();
+    var defaultCapsuleDesc = PxCapsuleControllerDesc_new_alloc();
+    PxCapsuleControllerDesc_setToDefault_mut(defaultCapsuleDesc);
+    defaultCapsuleDesc->height = 10f;
+    defaultCapsuleDesc->radius = 1.2f;
+    var defaultCapsuleStatus = defaultCapsuleDesc->IsValid();
 
     var controllerId = Guid.NewGuid();
+    var status = controllerDesc->IsValid();
+    var type = PxControllerDesc_getType((PxControllerDesc*)controllerDesc);
 
     var controller = PxControllerManager_createController_mut(Data.ControllerManager, (PxControllerDesc*)controllerDesc);
 

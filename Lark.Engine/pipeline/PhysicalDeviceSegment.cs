@@ -25,6 +25,10 @@ public class PhysicalDeviceSegment(LarkVulkanData data, SwapchainSupportUtil swa
 
       return indices.IsComplete() && extensionsSupported && swapChainAdequate;
     });
+    // Get device name.
+    var deviceProperties = data.vk.GetPhysicalDeviceProperties(data.PhysicalDevice);
+    var deviceName = Marshal.PtrToStringAnsi((IntPtr)deviceProperties.DeviceName);
+    logger.LogInformation("Selected physical device: {device}", deviceName);
 
     if (data.PhysicalDevice.Handle == 0)
       throw new Exception("No suitable device.");

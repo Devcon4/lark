@@ -161,7 +161,8 @@ public class PhysxManager(ILogger<PhysxManager> logger, EntityManager em, TimeMa
       return;
     }
 
-    var material = physxData.Physics->CreateMaterialMut(staticFriction, dynamicFriction, restitution);
+    // var material = physxData.Physics->CreateMaterialMut(staticFriction, dynamicFriction, restitution);
+    var material = PxPhysics_createMaterial_mut(physxData.Physics, staticFriction, dynamicFriction, restitution);
     physxData.Materials.Add(materialId, new(material));
   }
 
