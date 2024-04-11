@@ -11,6 +11,7 @@ builder.Services
   .AddLarkECS()
   .AddLarkSTD()
   .AddLarkPhysx(builder.Configuration)
+  .AddLarkUltralight(builder.Configuration)
   .AddGameSystems()
   .AddSerilog(new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)

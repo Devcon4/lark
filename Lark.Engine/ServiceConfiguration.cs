@@ -5,6 +5,7 @@ using Lark.Engine.physx.systems;
 using Lark.Engine.pipeline;
 using Lark.Engine.std;
 using Lark.Engine.std.systems;
+using Lark.Engine.Ultralight;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using NodaTime;
@@ -26,6 +27,18 @@ public static class ServiceConfiguration {
 
   public static IServiceCollection AddLarkModule<T>(this IServiceCollection services) where T : class, ILarkModule {
     services.AddSingleton<ILarkModule, T>();
+    return services;
+  }
+
+  // Ultralight integration only works with vulkan pipeline; Could be extended to support other pipelines.
+  public static IServiceCollection AddLarkUltralight(this IServiceCollection services, IConfiguration configuration) {
+    services.AddSingleton<ILarkModule, UltralightModule>();
+
+    services.Configure<UltralightConfig>(configuration.GetSection("Ultralight"));
+
+    services.AddSingleton<UltralightStatus>();
+    services.AddSingleton<UltralightController>();
+
     return services;
   }
 
