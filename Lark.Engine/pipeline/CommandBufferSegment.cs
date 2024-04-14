@@ -1,4 +1,5 @@
 using Lark.Engine.Model;
+using Lark.Engine.Ultralight;
 using Microsoft.Extensions.Logging;
 using Silk.NET.Maths;
 using Silk.NET.Vulkan;
@@ -6,7 +7,7 @@ using Buffer = Silk.NET.Vulkan.Buffer;
 
 namespace Lark.Engine.pipeline;
 
-public class CommandBufferSegment(LarkVulkanData data, ModelUtils modelUtils, CommandUtils commandUtils, ILogger<CommandBufferSegment> logger) {
+public class CommandBufferSegment(LarkVulkanData data, ModelUtils modelUtils, CommandUtils commandUtils, ILogger<CommandBufferSegment> logger, IEnumerable<ILarkPipeline> pipelines) {
 
   public unsafe void CreateCommandBuffers() {
     data.CommandBuffers = new CommandBuffer[LarkVulkanData.MaxFramesInFlight];
@@ -42,7 +43,7 @@ public class CommandBufferSegment(LarkVulkanData data, ModelUtils modelUtils, Co
 
     var clearValues = new ClearValue[] {
         new() {
-          Color = new ClearColorValue { Float32_0 = 0, Float32_1 = 0, Float32_2 = 0, Float32_3 = 1 }
+          Color = new ClearColorValue { Float32_0 = 0, Float32_1 = 0, Float32_2 = 0, Float32_3 = 0 }
         },
         new() {
           DepthStencil = new ClearDepthStencilValue { Depth = 1, Stencil = 0 }
@@ -85,6 +86,32 @@ public class CommandBufferSegment(LarkVulkanData data, ModelUtils modelUtils, Co
       modelUtils.Draw(instance.Transform, model, index);
     }
     data.vk.CmdEndRenderPass(data.CommandBuffers[index]);
+
+    foreach (var pipeline in pipelines) {
+
+      var renderPassBeginInfo = new RenderPassBeginInfo {
+        SType = StructureType.RenderPassBeginInfo,
+        RenderPass = pipeline.Data.RenderPass,
+        Framebuffer = pipeline.Data.Framebuffers[index],
+        RenderArea = { Offset = new Offset2D { X = 0, Y = 0 }, Extent = data.SwapchainExtent }
+      };
+
+      fixed (ClearValue* clearValuesPtr = clearValues) {
+        renderPassBeginInfo.ClearValueCount = 0;
+        renderPassBeginInfo.PClearValues = null;
+      }
+
+      data.vk.CmdBeginRenderPass(data.CommandBuffers[index], &renderPassBeginInfo, SubpassContents.Inline);
+      data.vk.CmdSetViewport(data.CommandBuffers[index], 0, 1, &viewport);
+      data.vk.CmdSetScissor(data.CommandBuffers[index], 0, 1, &scissor);
+
+      data.vk.CmdBindPipeline(data.CommandBuffers[index], PipelineBindPoint.Graphics, pipeline.Data.Pipeline);
+
+      pipeline.Draw(index);
+
+      data.vk.CmdEndRenderPass(data.CommandBuffers[index]);
+
+    }
 
     if (data.vk.EndCommandBuffer(data.CommandBuffers[index]) != Result.Success) {
       throw new Exception("failed to record command buffer!");

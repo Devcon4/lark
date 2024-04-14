@@ -30,6 +30,11 @@ public static class ServiceConfiguration {
     return services;
   }
 
+  public static IServiceCollection AddLarkPipeline<T>(this IServiceCollection services) where T : class, ILarkPipeline {
+    services.AddSingleton<ILarkPipeline, T>();
+    return services;
+  }
+
   // Ultralight integration only works with vulkan pipeline; Could be extended to support other pipelines.
   public static IServiceCollection AddLarkUltralight(this IServiceCollection services, IConfiguration configuration) {
     services.AddSingleton<ILarkModule, UltralightModule>();
@@ -38,6 +43,7 @@ public static class ServiceConfiguration {
 
     services.AddSingleton<UltralightStatus>();
     services.AddSingleton<UltralightController>();
+    services.AddLarkPipeline<UltralightPipeline>();
 
     return services;
   }

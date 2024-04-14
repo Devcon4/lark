@@ -48,9 +48,9 @@ public class ImageUtils(LarkVulkanData data, BufferUtils bufferUtils, CommandUti
 
     CreateImage((uint)rawImage.Width, (uint)rawImage.Height, Format.R8G8B8A8Unorm, ImageTiling.Optimal, ImageUsageFlags.TransferDstBit | ImageUsageFlags.SampledBit, MemoryPropertyFlags.DeviceLocalBit, ref image, ref imageMemory);
 
-    TransitionImageLayout(image, Format.R8G8B8A8Unorm, ImageLayout.Undefined, ImageLayout.TransferDstOptimal);
+    TransitionImageLayout(image, ImageLayout.Undefined, ImageLayout.TransferDstOptimal);
     CopyBufferToImage(stagingBuffer, image, (uint)rawImage.Width, (uint)rawImage.Height);
-    TransitionImageLayout(image, Format.R8G8B8A8Unorm, ImageLayout.TransferDstOptimal, ImageLayout.ShaderReadOnlyOptimal);
+    TransitionImageLayout(image, ImageLayout.TransferDstOptimal, ImageLayout.ShaderReadOnlyOptimal);
 
     data.vk.DestroyBuffer(data.Device, stagingBuffer, null);
     data.vk.FreeMemory(data.Device, stagingBufferMemory, null);
@@ -151,7 +151,7 @@ public class ImageUtils(LarkVulkanData data, BufferUtils bufferUtils, CommandUti
     return imageView;
   }
 
-  private unsafe void TransitionImageLayout(Image image, Format format, ImageLayout oldLayout, ImageLayout newLayout) {
+  public unsafe void TransitionImageLayout(Image image, ImageLayout oldLayout, ImageLayout newLayout) {
     var commandBuffer = commandUtils.BeginSingleTimeCommands();
 
     var barrier = new ImageMemoryBarrier {
@@ -207,7 +207,7 @@ public class ImageUtils(LarkVulkanData data, BufferUtils bufferUtils, CommandUti
     commandUtils.EndSingleTimeCommands(commandBuffer);
   }
 
-  private unsafe void CopyBufferToImage(Buffer buffer, Image image, uint width, uint height) {
+  public unsafe void CopyBufferToImage(Buffer buffer, Image image, uint width, uint height) {
     var commandBuffer = commandUtils.BeginSingleTimeCommands();
 
     var region = new BufferImageCopy {

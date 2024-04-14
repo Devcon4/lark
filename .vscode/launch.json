@@ -5,19 +5,25 @@
 	"version": "0.2.0",
 	"configurations": [
 		{
-			"name": ".NET Core Launch (console)",
-			"type": "coreclr",
+			"name": "C#: Lark.Game Debug",
+			"type": "dotnet",
 			"request": "launch",
-			"preLaunchTask": "build",
-			"program": "${workspaceFolder}/Lark.Game/bin/Debug/net8.0/Lark.Game.dll",
-			"args": [],
-			"cwd": "${workspaceFolder}/Lark.Game",
-			"console": "internalConsole",
-			"stopAtEntry": false,
-			"env": {
-				"DOTNET_ENVIRONMENT": "Development"
-			}
+			"projectPath": "${workspaceFolder}\\Lark.Game\\Lark.Game.csproj"
 		},
+		// {
+		// 	"name": ".NET Core Launch (console)",
+		// 	"type": "coreclr",
+		// 	"request": "launch",
+		// 	"preLaunchTask": "build",
+		// 	"program": "${workspaceFolder}/Lark.Game/bin/Debug/net8.0/Lark.Game.dll",
+		// 	"args": [],
+		// 	"cwd": "${workspaceFolder}/Lark.Game",
+		// 	"console": "internalConsole",
+		// 	"stopAtEntry": false,
+		// 	"env": {
+		// 		"DOTNET_ENVIRONMENT": "Development"
+		// 	}
+		// },
 		{
 			"name": ".NET Core Attach",
 			"type": "coreclr",

@@ -1,5 +1,6 @@
 using Lark.Engine.Model;
 using Lark.Engine.std;
+using Lark.Engine.Ultralight;
 using Microsoft.Extensions.Logging;
 using Silk.NET.Maths;
 using Silk.NET.Vulkan;
@@ -30,7 +31,8 @@ public class VulkanBuilder(
     MeshBufferSegment meshBufferSegment,
     DepthSegment depthSegment,
     ModelUtils modelUtils,
-    TimeManager timeManager
+    TimeManager timeManager,
+    IEnumerable<ILarkPipeline> pipelines
     ) {
 
   public void InitVulkan() {
@@ -60,6 +62,10 @@ public class VulkanBuilder(
     // descriptorSetSegment.CreateDescriptorSets();
     syncSegment.CreateSyncObjects();
 
+    foreach (var pipeline in pipelines) {
+      pipeline.Start();
+    }
+
     // data.cameras.Add(LarkCamera.DefaultCamera());
 
     // data.models.Add(modelUtils.LoadFile("damagedHelmet/DamagedHelmet.glb"));
@@ -84,6 +90,10 @@ public class VulkanBuilder(
 
     foreach (var (_, model) in data.models) {
       model.Dispose(data);
+    }
+
+    foreach (var pipeline in pipelines) {
+      pipeline.Cleanup();
     }
 
     uniformBufferSegment.CleanupUniformBuffers();
@@ -178,6 +188,10 @@ public class VulkanBuilder(
 
     if (data.ImagesInFlight[imageIndex].Handle != default) {
       data.vk.WaitForFences(data.Device, 1, data.ImagesInFlight[imageIndex], true, ulong.MaxValue);
+    }
+
+    foreach (var pipeline in pipelines) {
+      pipeline.Update(imageIndex);
     }
 
     uniformBufferSegment.UpdateUniformBuffer(renderingCamera, data.CurrentFrame);
