@@ -74,7 +74,25 @@
     <Copy SourceFiles="@(ModelFiles)" DestinationFolder="$(OutDir)resources\models\%(RecursiveDir)" />
   </Target>
 
-  <Target Name="CopyResources" AfterTargets="CompileShaders">
+  <Target Name="NpmInstall" Inputs="..\Lark.UI\package.json;..\Lark.UI\package-lock.json" Outputs="..\Lark.UI\node_modules">
+    <!-- Run npm install in the Lark.UI folder -->
+    <Exec WorkingDirectory="..\Lark.UI" Command="npm install" />
+  </Target>
+  
+  <Target Name="BuildAndCopyClient" DependsOnTargets="NpmInstall" BeforeTargets="Build">
+    <!-- Run npm run build in the Lark.UI folder -->
+    <Exec WorkingDirectory="..\Lark.UI" Command="npm run build" />
+  
+    <!-- Copy the output to the resources\client folder -->
+    <ItemGroup>
+      <DistFiles Include="..\Lark.UI\dist\**\*.*" />
+    </ItemGroup>
+    <MakeDir Directories=".\resources\client" />
+    <Copy SourceFiles="@(DistFiles)" DestinationFolder=".\resources\client\%(RecursiveDir)" />
+    <Copy SourceFiles="@(DistFiles)" DestinationFolder="$(OutDir)\resources\client\%(RecursiveDir)" />
+  </Target>
+
+  <Target Name="CopyResources" DependsOnTargets="BuildAndCopyClient;CompileShaders" AfterTargets="Build;Publish">
     <ItemGroup>
       <ResourceFiles Include="$(OutDir)resources\**\*.*" />
     </ItemGroup>

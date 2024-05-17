@@ -44,6 +44,7 @@ public static class ServiceConfiguration {
     services.AddSingleton<UltralightStatus>();
     services.AddSingleton<UltralightController>();
     services.AddLarkPipeline<UltralightPipeline>();
+    services.AddLarkManager<UltralightManager>();
 
     return services;
   }

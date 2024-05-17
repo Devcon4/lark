@@ -17,12 +17,12 @@ public unsafe class UltralightController(ILogger<UltralightController> logger, I
   private Config* _config;
   private Renderer* _renderer;
   private Session* _session;
-  private View* _view;
-
+  public View* View;
+  // private View* _inspectorView;
   private static readonly Guid _instanceId = Guid.NewGuid();
   private readonly string InstanceName = $"Lark.Engine.Ultralight.{_instanceId}";
 
-  private unsafe void OnLogMessage(LogLevel level, string message) => logger.Log(level, message);
+  private void OnLogMessage(LogLevel level, string message) => Console.WriteLine($"{level}: " + message);
 
   public Task StartAsync() {
     logger.LogInformation("Initializing Ultralight... instance: {InstanceName}", InstanceName);
@@ -47,19 +47,19 @@ public unsafe class UltralightController(ILogger<UltralightController> logger, I
     cachePath->Destroy();
 
     // resources are in client/resources folder in the bin. Setup the resources path.
-    var resourcesPath = ultralightString.Create(Path.Combine(env.ContentRootPath, "client", "resources"));
+    var resourcesPath = ultralightString.Create(Path.Combine(env.ContentRootPath, "ultralight"));
     _config->SetResourcePath(resourcesPath);
     resourcesPath->Destroy();
 
     _config->SetUseGpuRenderer(false);
     _config->SetEnableImages(true);
-    _config->SetEnableJavaScript(false);
-    _config->SetUserStylesheet(ultralightString.Create("h1 { color: cyan; } body { background: transparent; }"));
+    _config->SetEnableJavaScript(true);
+    // _config->SetUserStylesheet(ultralightString.Create("h1 { color: cyan; } body { background: transparent; }"));
 
     AppCore.EnablePlatformFontLoader();
 
     // setup the asset path
-    var assetPath = ultralightString.Create(Path.Combine(env.ContentRootPath, "client", "assets"));
+    var assetPath = ultralightString.Create(Path.Combine(env.ContentRootPath, "resources", "client"));
     AppCore.EnablePlatformFileSystem(assetPath);
     assetPath->Destroy();
 
@@ -68,23 +68,26 @@ public unsafe class UltralightController(ILogger<UltralightController> logger, I
     _session = Session.Create(_renderer, false, sessionName);
 
     // todo match the view size to the window size
-    _view = View.Create(_renderer, 800, 600, true, _session);
+    View = ImpromptuNinjas.UltralightSharp.View.Create(_renderer, 800, 600, true, _session);
     logger.LogInformation("Ultralight initialized");
 
-    var jsString = "console.log('init!'); window.observers = []; window.SetState = (state) => { console.log('setting state!'); state = JSON.parse(state); window.observers.forEach(o => o(state)); }; window.ObsState = (callback) => { window.observers = [...observers, callback]; };";
-    var htmlString = ultralightString.Create("<h1 id=\"fps\"></h1><script>" + jsString + "</script><script> window.ObsState((state) => { document.querySelector('#fps').innerText = 'FPS: ' + state.fps; }); </script>");
-    _view->LoadHtml(htmlString);
-    htmlString->Destroy();
+    // _view->LoadHtml(htmlString);
+    // htmlString->Destroy();
 
+    View->SetAddConsoleMessageCallback(AddConsoleMessageCallback(), null);
+    View->SetFinishLoadingCallback(FinishLoadingCallback(), null);
 
-    _view->SetAddConsoleMessageCallback(AddConsoleMessageCallback(), null);
-    _view->SetFinishLoadingCallback(FinishLoadingCallback(), null);
+    // Create inspector view
+    // _inspectorView = _view->CreateInspector();
+    // var inspectorString = ultralightString.Create($"file:///inspector/Main.html");
+    // _inspectorView->LoadUrl(inspectorString);
+    // inspectorString->Destroy();
 
     // Todo: We should prob navigate to index.html here.
-    // var urlString = ultralightString.Create("file:///index.html");
-    // _view->LoadUrl(urlString);
-    // urlString->Destroy();
 
+    var urlString = ultralightString.Create($"file:///index.html");
+    View->LoadUrl(urlString);
+    urlString->Destroy();
 
     status.Initialized.SetResult();
     return Task.CompletedTask;
@@ -102,7 +105,7 @@ public unsafe class UltralightController(ILogger<UltralightController> logger, I
   }
 
   public void Cleanup() {
-    _view->Destroy();
+    View->Destroy();
     _session->Destroy();
     _renderer->Destroy();
     _config->Destroy();
@@ -121,7 +124,7 @@ public unsafe class UltralightController(ILogger<UltralightController> logger, I
 
   public static string ToJson<T>(T obj) => JsonSerializer.Serialize(obj);
   public unsafe HashSet<string> ListObjectProperties(JsValue* jsObject) {
-    var ctx = _view->LockJsContext();
+    var ctx = View->LockJsContext();
 
     // Get the property names
     JsPropertyNameArray* propertyNames = JavaScriptCore.JsObjectCopyPropertyNames(ctx, jsObject);
@@ -159,7 +162,7 @@ public unsafe class UltralightController(ILogger<UltralightController> logger, I
   }
   public void SetState(string stateJson) {
     // logger.LogInformation("C# Setting state: {stateJson}", stateJson);
-    var ctx = _view->LockJsContext();
+    var ctx = View->LockJsContext();
     var globalObject = JavaScriptCore.ContextGetGlobalObject(ctx);
     // var globalProps = ListObjectProperties(globalObject);
 
@@ -177,7 +180,7 @@ public unsafe class UltralightController(ILogger<UltralightController> logger, I
     // var str = ultralightString.Create($"console.log('script!');");
     var str = ultralightString.Create("window.SetState('{\"fps\": 100}');");
     ultralightString** ex = null;
-    var rawRes = _view->EvaluateScript(str, ex);
+    var rawRes = View->EvaluateScript(str, ex);
     var res = rawRes->Read();
 
     if (ex is not null) {
@@ -209,7 +212,7 @@ public unsafe class UltralightController(ILogger<UltralightController> logger, I
   public FinishLoadingCallback FinishLoadingCallback() {
     return (view, caller, frameId, isMainFrame, url) => {
       var htmlStr = ultralightString.Create("document.documentElement.outerHTML");
-      var jsResult = _view->EvaluateScript(htmlStr, null);
+      var jsResult = View->EvaluateScript(htmlStr, null);
       // var jsResult = _view->EvaluateScript(ultralightString.Create("document.documentElement.outerHTML"), null)->Read();
 
       var html = jsResult->Read();
@@ -217,7 +220,7 @@ public unsafe class UltralightController(ILogger<UltralightController> logger, I
 
       var str = ultralightString.Create("window.SetState('{\"fps\": 100}');");
       ultralightString** ex = null;
-      _view->EvaluateScript(str, ex);
+      View->EvaluateScript(str, ex);
     };
   }
 
@@ -228,11 +231,11 @@ public unsafe class UltralightController(ILogger<UltralightController> logger, I
   }
 
   public void SetViewport(uint width, uint height) {
-    _view->Resize(width, height);
+    View->Resize(width, height);
   }
 
   public Bitmap* GetBitmap() {
-    var surface = _view->GetSurface();
+    var surface = View->GetSurface();
     return surface->GetBitmap();
   }
 }

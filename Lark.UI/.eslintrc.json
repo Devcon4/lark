@@ -1,0 +1,24 @@
+{
+	"env": {
+		"browser": true,
+		"es2021": true
+	},
+	"extends": ["google", "prettier", "plugin:@typescript-eslint/recommended"],
+	"parser": "@typescript-eslint/parser",
+	"parserOptions": {
+		"ecmaVersion": 12,
+		"sourceType": "module",
+		"project": "./tsconfig.json"
+	},
+	"plugins": ["@typescript-eslint"],
+	"rules": {
+		"object-curly-spacing": 0,
+		"no-unused-vars": ["warn"],
+		"require-jsdoc": 0,
+		"valid-jsdoc": 0,
+		"array-element-newline": [
+			"warn",
+			{ "ArrayExpression": "consistent", "ArrayPattern": { "minItems": 1 } }
+		]
+	}
+}

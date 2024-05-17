@@ -7,3 +7,5 @@
 .vs
 /.vs/**
 .mono
+/Lark.Game/resources/client
+**/*.js.timestamp-*
