@@ -90,13 +90,13 @@ export class AppComponent extends LitElement {
     )
   );
 
-  private menuRoute = {
-    render: () => html`<menu-view></menu-view>`,
-    // enter: async () => {
-    //   await import('./menu-view');
-    //   return true;
-    // },
-  };
+  // private menuRoute = {
+  //   render: () => html`<menu-view></menu-view>`,
+  // enter: async () => {
+  //   await import('./menu-view');
+  //   return true;
+  // },
+  // };
 
   // private router: Router = new Router(this, [
   //   {
