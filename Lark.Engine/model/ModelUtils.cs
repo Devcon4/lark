@@ -8,10 +8,11 @@ using System.Runtime.InteropServices;
 using Buffer = Silk.NET.Vulkan.Buffer;
 using System.Runtime.CompilerServices;
 using System.Numerics;
+using Lark.Engine.std;
 
 namespace Lark.Engine.Model;
 
-public class ModelUtils(LarkVulkanData data, ImageUtils imageUtils, BufferUtils bufferUtils, ILogger<ModelUtils> logger) {
+public class ModelUtils(LarkVulkanData data, ImageUtils imageUtils, BufferUtils bufferUtils, ILogger<ModelUtils> logger, TimeManager tm) {
 
 
   public LarkModel LoadFile(string modelName) {
@@ -238,6 +239,7 @@ public class ModelUtils(LarkVulkanData data, ImageUtils imageUtils, BufferUtils 
   }
 
   public unsafe void Draw(LarkTransform transform, LarkModel model, uint index) {
+    logger.LogInformation("{frame} :: Drawing model {model} :: {position}", tm.TotalFrames, model.ModelId, transform.Translation);
     var offsets = new ulong[] { 0 };
 
     // Bind the descriptor set for the matrix.
@@ -247,7 +249,7 @@ public class ModelUtils(LarkVulkanData data, ImageUtils imageUtils, BufferUtils 
       data.PipelineLayout,
       0,
       1,
-      model.MatrixDescriptorSet,
+      model.MatrixDescriptorSet.Span[(int)index],
       0,
       null
     );
@@ -299,19 +301,19 @@ public class ModelUtils(LarkVulkanData data, ImageUtils imageUtils, BufferUtils 
     var matrixLayouts = Enumerable.Repeat(data.Layouts.matricies, LarkVulkanData.MaxFramesInFlight).ToArray().AsMemory();
     var handler = matrixLayouts.Pin();
 
-    var matrixAllocInfo = new DescriptorSetAllocateInfo {
-      SType = StructureType.DescriptorSetAllocateInfo,
-      DescriptorPool = model.DescriptorPool,
-      DescriptorSetCount = 1,
-      PSetLayouts = (DescriptorSetLayout*)handler.Pointer
-    };
-
-    if (data.vk.AllocateDescriptorSets(data.Device, &matrixAllocInfo, out model.MatrixDescriptorSet) != Result.Success) {
-      throw new Exception("failed to allocate descriptor sets!");
-    }
-
     // for each MaxFramesInFlight, create the ubo descriptor set.
     for (var i = 0; i < LarkVulkanData.MaxFramesInFlight; i++) {
+      var matrixAllocInfo = new DescriptorSetAllocateInfo {
+        SType = StructureType.DescriptorSetAllocateInfo,
+        DescriptorPool = model.DescriptorPool,
+        DescriptorSetCount = 1,
+        PSetLayouts = (DescriptorSetLayout*)handler.Pointer
+      };
+
+      if (data.vk.AllocateDescriptorSets(data.Device, &matrixAllocInfo, out model.MatrixDescriptorSet.Span[i]) != Result.Success) {
+        throw new Exception("failed to allocate descriptor sets!");
+      }
+
       var bufferInfo = new DescriptorBufferInfo {
         Buffer = data.UniformBuffers[i].Buffer,
         Offset = 0,
@@ -320,7 +322,7 @@ public class ModelUtils(LarkVulkanData data, ImageUtils imageUtils, BufferUtils 
 
       var uboDescriptorSet = new WriteDescriptorSet {
         SType = StructureType.WriteDescriptorSet,
-        DstSet = model.MatrixDescriptorSet,
+        DstSet = model.MatrixDescriptorSet.Span[i],
         DstBinding = 0,
         DstArrayElement = 0,
         DescriptorType = DescriptorType.UniformBuffer,

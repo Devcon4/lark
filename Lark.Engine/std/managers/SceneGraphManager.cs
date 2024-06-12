@@ -1,10 +1,11 @@
 
 using System.Collections.Frozen;
+using System.Numerics;
 using Lark.Engine.ecs;
 
 namespace Lark.Engine.std;
 
-public class SceneGraphManager : LarkManager {
+public class SceneGraphManager(EntityManager em) : LarkManager {
   public Dictionary<Guid, FrozenSet<Guid>> Nodes { get; private set; } = [];
 
   // InverseGraph: Lookup which returns the branch of the tree for each leaf node
@@ -91,5 +92,35 @@ public class SceneGraphManager : LarkManager {
     return new HashSet<Guid>().ToFrozenSet();
   }
 
+  public void UpdateGlobalTransforms() {
+    foreach (var (entityId, components) in em.GetEntitiesWithComponentsSync(typeof(GlobalTransformComponent))) {
+      var globalTransform = components.Get<TransformComponent>();
+
+      foreach (var ancestor in GetBranch(entityId)) {
+        var (_, ac) = em.GetEntity(ancestor);
+        var transform = ac.Get<TransformComponent>();
+        globalTransform = CombineTransforms(globalTransform, transform);
+      }
+
+      em.UpdateEntityComponent(entityId, new GlobalTransformComponent(globalTransform.Position, globalTransform.Scale, globalTransform.Rotation));
+    }
+  }
+
+  private TransformComponent CombineTransforms(TransformComponent a, TransformComponent b) {
+    // Combine two TransformComponent instances
+    // var position = a.Position + b.Position;
+    // var scale = a.Scale * b.Scale;
+    // var rotation = a.Rotation * b.Rotation;
+
+    // Example: if a child is positioned [-2,0,0] to parent [0,0,0], and the parent rotates 90 degrees, we need to transform the child. In otherwords the child is positioned relative to the parent.
+    // Our rotation also is relative to the parent, so we need to transform the child's rotation as well.
+    // scale is not effected.
+    var position = a.Position + Vector3.Transform(b.Position, a.Rotation);
+    var rotation = a.Rotation * b.Rotation;
+    var scale = b.Scale;
+
+
+    return new TransformComponent(position, scale, rotation);
+  }
 
 }

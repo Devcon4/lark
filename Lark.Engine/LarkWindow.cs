@@ -35,6 +35,7 @@ public class LarkWindow(ILogger<LarkWindow> logger, IOptions<GameSettings> optio
     _glfw.WindowHint(WindowHintBool.Visible, true);
     _glfw.WindowHint(WindowHintBool.CenterCursor, true);
     _glfw.WindowHint(WindowHintBool.FocusOnShow, true);
+
     // Get the primary monitor.
     var monitor = options.Fullscreen ? _glfw.GetPrimaryMonitor() : null;
     // Get monitor resolution.

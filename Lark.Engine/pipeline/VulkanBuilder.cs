@@ -145,11 +145,12 @@ public class VulkanBuilder(
   // currentFrame
 
   public unsafe void DrawFrame() {
-    timeManager.Update();
 
     var d = data;
 
     var renderingCamera = d.cameras.Values.FirstOrDefault(c => c.Active, LarkCamera.DefaultCamera());
+
+    logger.LogInformation("{frame} :: RenderCamera position :: {position}", timeManager.TotalFrames, renderingCamera.Transform.Translation);
 
     // camera.SetPosition(new Vector3D<float>(5, 0, 0));
     // camera.SetRotation(new Vector3D<float>(0, -1, 0), 270);
@@ -251,6 +252,7 @@ public class VulkanBuilder(
     }
 
     data.CurrentFrame = (data.CurrentFrame + 1) % LarkVulkanData.MaxFramesInFlight;
+    timeManager.Update();
 
   }
 

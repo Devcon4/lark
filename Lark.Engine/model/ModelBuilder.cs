@@ -213,7 +213,7 @@ public class LarkModel {
   public List<ushort> meshIndices = new();
   public DescriptorPool DescriptorPool;
 
-  public DescriptorSet MatrixDescriptorSet;
+  public Memory<DescriptorSet> MatrixDescriptorSet = new DescriptorSet[LarkVulkanData.MaxFramesInFlight];
 
   public int IndiceOffset = 0;
 

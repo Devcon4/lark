@@ -23,11 +23,16 @@ public interface ILarkSystemAfterUpdate {
   public abstract void AfterUpdate();
 }
 
+public interface ILarkSystemBeforeDraw {
+  public abstract void BeforeDraw();
+}
+
 public interface ILarkSystemInit {
   public abstract Task Init();
 }
 
 public interface ILarkSystem {
+  public abstract int Priority { get; }
   public abstract Type[] RequiredComponents { get; }
   public abstract void Update(ValueTuple<Guid, FrozenSet<ILarkComponent>> Entity);
 }
@@ -35,6 +40,7 @@ public interface ILarkSystem {
 public interface ILarkSyncSystem : ILarkSystem { }
 
 public abstract class LarkSystem : ILarkSystem, ILarkSyncSystem {
+  public virtual int Priority => 1024;
   public abstract Type[] RequiredComponents { get; }
 
 

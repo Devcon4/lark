@@ -92,10 +92,20 @@ public class UniformBufferSegment(LarkVulkanData data, LarkWindow larkWindow, Bu
     // Flip the Y coordinate because Vulkan is left handed.
     // uboData.proj.M22 *= -1;
 
+    var nextFrame = (currentFrame + 1) % LarkVulkanData.MaxFramesInFlight;
+
     void* dataPtr;
     data.vk.MapMemory(data.Device, data.UniformBuffers[currentFrame].Memory, 0, (ulong)sizeof(UniformBufferObject), 0, &dataPtr);
     new Span<UniformBufferObject>(dataPtr, 1)[0] = uboData;
     data.vk.UnmapMemory(data.Device, data.UniformBuffers[currentFrame].Memory);
+
+    // data.vk.MapMemory(data.Device, data.UniformBuffers[1].Memory, 0, (ulong)sizeof(UniformBufferObject), 0, &dataPtr);
+    // new Span<UniformBufferObject>(dataPtr, 1)[0] = uboData;
+    // data.vk.UnmapMemory(data.Device, data.UniformBuffers[1].Memory);
+
+    // data.vk.MapMemory(data.Device, data.UniformBuffers[2].Memory, 0, (ulong)sizeof(UniformBufferObject), 0, &dataPtr);
+    // new Span<UniformBufferObject>(dataPtr, 1)[0] = uboData;
+    // data.vk.UnmapMemory(data.Device, data.UniformBuffers[2].Memory);
   }
 
   public unsafe void CleanupUniformBuffers() {

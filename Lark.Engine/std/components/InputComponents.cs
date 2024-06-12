@@ -38,6 +38,24 @@ public record struct LarkKeyTrigger : ILarkActionTrigger, ILarkKeyInput {
   }
 }
 
+public record struct LarkMultiTrigger : ILarkActionTrigger {
+  public FrozenSet<ILarkActionTrigger> Triggers { get; init; }
+
+  public LarkMultiTrigger(IEnumerable<ILarkActionTrigger> triggers) {
+    Triggers = triggers.ToFrozenSet();
+  }
+
+  public bool Check(ILarkInput input) {
+    if (input is not ILarkKeyInput keyInput) return false;
+
+    foreach (var trigger in Triggers) {
+      if (trigger.Check(keyInput)) return true;
+    }
+
+    return false;
+  }
+}
+
 public record struct LarkKeyEvent(LarkKeys Key, LarkInputAction Action, LarkKeyModifiers? Mods = null) : ILarkKeyInput, ILarkInputAction {
   public LarkKeys Key { get; init; } = Key;
   public LarkInputAction Action { get; init; } = Action;

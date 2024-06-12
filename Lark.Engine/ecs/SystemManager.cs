@@ -24,6 +24,11 @@ public class SystemManager(
 
     // return Task.CompletedTask;
 
+    // Log registered systems and their priorities
+    foreach (var system in systems.OrderByDescending(s => s.Priority)) {
+      logger.LogInformation("Registered system {system} :: {priority}", system.GetType().Name, system.Priority);
+    }
+
 
     data.sw.Start();
 
@@ -54,9 +59,9 @@ public class SystemManager(
   // private List<Task> BeforeUpdates => systems.Select(async s => await Task.Run(() => s.BeforeUpdate())).ToList();
   // private List<Task> AfterUpdates => systems.Select(async s => await Task.Run(() => s.AfterUpdate())).ToList();
 
-  private readonly List<ILarkSystemBeforeUpdate> BeforeUpdateSystems = systems.Where(s => s is ILarkSystemBeforeUpdate).Cast<ILarkSystemBeforeUpdate>().ToList();
-  private readonly List<ILarkSystemAfterUpdate> AfterUpdateSystems = systems.Where(s => s is ILarkSystemAfterUpdate).Cast<ILarkSystemAfterUpdate>().ToList();
-
+  private readonly List<ILarkSystemBeforeUpdate> BeforeUpdateSystems = systems.OrderByDescending(s => s.Priority).Where(s => s is ILarkSystemBeforeUpdate).Cast<ILarkSystemBeforeUpdate>().ToList();
+  private readonly List<ILarkSystemAfterUpdate> AfterUpdateSystems = systems.OrderByDescending(s => s.Priority).Where(s => s is ILarkSystemAfterUpdate).Cast<ILarkSystemAfterUpdate>().ToList();
+  private readonly List<ILarkSystemBeforeDraw> BeforeDrawSystems = systems.OrderByDescending(s => s.Priority).Where(s => s is ILarkSystemBeforeDraw).Cast<ILarkSystemBeforeDraw>().ToList();
 
   public async Task Run() {
 
@@ -95,6 +100,10 @@ public class SystemManager(
 
     foreach (var system in AfterUpdateSystems) {
       system.AfterUpdate();
+    }
+
+    foreach (var system in BeforeDrawSystems) {
+      system.BeforeDraw();
     }
 
     // var consumer = Task.Run(async () => {

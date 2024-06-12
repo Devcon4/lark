@@ -12,7 +12,8 @@ using SkiaSharp;
 
 namespace Lark.Engine.std;
 
-public class RenderSystem(ILogger<RenderSystem> logger, EntityManager em, TimeManager tm, LarkVulkanData data, ModelUtils modelUtils) : LarkSystem, ILarkSystemInit {
+public class RenderSystem(ILogger<RenderSystem> logger, EntityManager em, TimeManager tm, LarkVulkanData data, ModelUtils modelUtils) : LarkSystem, ILarkSystemInit, ILarkSystemBeforeDraw {
+  public override int Priority => 1001;
   public override Type[] RequiredComponents => [typeof(MeshComponent), typeof(MetadataComponent), typeof(GlobalTransformComponent)];
 
   public Task Init() {
@@ -20,21 +21,9 @@ public class RenderSystem(ILogger<RenderSystem> logger, EntityManager em, TimeMa
     return Task.CompletedTask;
   }
 
-  public Dictionary<Guid, Guid> entityToInstance = new();
-  public Dictionary<string, Guid> pathToModel = new();
+  public Dictionary<Guid, Guid> entityToInstance = [];
+  public Dictionary<string, Guid> pathToModel = [];
 
-  public override void Update((Guid, FrozenSet<ILarkComponent>) Entity) {
-    var (key, components) = Entity;
-
-    var transform = components.Get<GlobalTransformComponent>();
-    if (!entityToInstance.ContainsKey(key)) {
-      CreateInstance(Entity);
-    }
-    var instanceId = entityToInstance[key];
-    var instance = data.instances[instanceId];
-    instance.Transform = new LarkTransform(transform.Position.ToGeneric(), transform.Rotation.ToGeneric(), transform.Scale.ToGeneric());
-    data.instances[instanceId] = instance;
-  }
 
   private Guid LoadModel(string path) {
     if (pathToModel.ContainsKey(path)) {
@@ -81,4 +70,19 @@ public class RenderSystem(ILogger<RenderSystem> logger, EntityManager em, TimeMa
     entityToInstance.Add(key, instance.InstanceId);
     data.instances.Add(instance.InstanceId, instance);
   }
+
+  public void BeforeDraw() {
+    logger.LogInformation("{frame} :: RenderSystem update instances", tm.TotalFrames);
+    foreach (var (key, components) in em.GetEntitiesWithComponentsSync(RequiredComponents)) {
+      var transform = components.Get<GlobalTransformComponent>();
+      if (!entityToInstance.ContainsKey(key)) {
+        CreateInstance((key, components));
+      }
+      var instanceId = entityToInstance[key];
+      var instance = data.instances[instanceId];
+      instance.Transform = new LarkTransform(transform.Position.ToGeneric(), transform.Rotation.ToGeneric(), transform.Scale.ToGeneric());
+      data.instances[instanceId] = instance;
+    }
+  }
+
 }

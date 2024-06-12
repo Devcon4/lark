@@ -3,49 +3,50 @@ using System.Numerics;
 using Lark.Engine.ecs;
 using Lark.Engine.Model;
 using Lark.Engine.pipeline;
+using Microsoft.Extensions.Logging;
 using Silk.NET.Maths;
 
 namespace Lark.Engine.std;
 
 
-public class CameraSystem(EntityManager em, LarkVulkanData data) : LarkSystem, ILarkSystemAfterUpdate {
-  public override Type[] RequiredComponents => [typeof(MetadataComponent), typeof(GlobalTransformComponent), typeof(CameraComponent)];
+public class CameraSystem(EntityManager em, LarkVulkanData data, ILogger<CameraManager> logger, TimeManager tm) : LarkSystem, ILarkSystemBeforeDraw {
+  public override int Priority => 1000;
+  public override Type[] RequiredComponents => [typeof(GlobalTransformComponent), typeof(CameraComponent)];
 
   private Dictionary<Guid, LarkCamera> cameraLookup = new();
 
+  public async void BeforeDraw() {
+    foreach (var (key, components) in em.GetEntitiesWithComponentsSync(RequiredComponents)) {
+      var (transform, camera) = components.Get<GlobalTransformComponent, CameraComponent>();
 
+      if (!cameraLookup.ContainsKey(key)) {
+        cameraLookup.Add(key, LarkCamera.DefaultCamera());
+      }
 
-  public async void AfterUpdate() {
-    data.cameras = cameraLookup;
-    await Task.CompletedTask;
-  }
+      if (!camera.FixedAspectRatio) {
+        camera = camera with {
+          AspectRatio = data.SwapchainExtent.Width / (float)data.SwapchainExtent.Height,
+        };
 
-  public override void Update((Guid, FrozenSet<ILarkComponent>) Entity) {
-    var (key, components) = Entity;
-    var (metadata, transform, camera) = components.Get<MetadataComponent, GlobalTransformComponent, CameraComponent>();
+        em.UpdateEntityComponent(key, camera);
+      }
 
-    if (!cameraLookup.ContainsKey(key)) {
-      cameraLookup.Add(key, LarkCamera.DefaultCamera());
-    }
-
-    if (!camera.FixedAspectRatio) {
-      camera = camera with {
-        AspectRatio = data.SwapchainExtent.Width / (float)data.SwapchainExtent.Height,
+      var newCamera = cameraLookup[key] with {
+        Active = camera.Active,
+        AspectRatio = camera.AspectRatio,
+        ViewportSize = new Vector2(data.SwapchainExtent.Width, data.SwapchainExtent.Height),
+        Far = camera.Far,
+        Near = camera.Near,
+        Fov = camera.Fov,
+        Transform = new LarkTransform(transform.Position.ToGeneric(), transform.Rotation.ToGeneric(), transform.Scale.ToGeneric()),
       };
 
-      em.UpdateEntityComponent(key, camera);
+      logger.LogInformation("{frame} :: Updating camera {key} with new pos {newPos} :: {oldPos}", tm.TotalFrames, key, newCamera.Transform.Translation, cameraLookup[key].Transform.Translation);
+
+      cameraLookup[key] = newCamera;
     }
 
-    var newCamera = cameraLookup[key] with {
-      Active = camera.Active,
-      AspectRatio = camera.AspectRatio,
-      ViewportSize = new Vector2(data.SwapchainExtent.Width, data.SwapchainExtent.Height),
-      Far = camera.Far,
-      Near = camera.Near,
-      Fov = camera.Fov,
-      Transform = new LarkTransform(transform.Position.ToGeneric(), transform.Rotation.ToGeneric(), transform.Scale.ToGeneric()),
-    };
-
-    cameraLookup[key] = newCamera;
+    data.cameras = cameraLookup;
+    await Task.CompletedTask;
   }
 }
