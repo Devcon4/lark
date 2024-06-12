@@ -1,6 +1,5 @@
 using System.Numerics;
 using Lark.Engine.ecs;
-using Lark.Engine.physx.managers;
 using Lark.Engine.std;
 using Microsoft.Extensions.Logging;
 
@@ -10,7 +9,7 @@ public record struct AbilitySetEntityMarker : ILarkComponent { }
 public record struct AbilitySetComponent(string SetName, Dictionary<string, IBaseAbility> Abilities) : ILarkComponent;
 public interface IBaseAbility : ILarkComponent { }
 
-public class AbilitySetManager(ILogger<AbilitySetManager> logger, EntityManager em, PhysxManager pm) : LarkManager {
+public class AbilitySetManager(ILogger<AbilitySetManager> logger, EntityManager em) : LarkManager {
 
   public static Type[] AbilitySetEntity => [typeof(AbilitySetEntityMarker)];
 

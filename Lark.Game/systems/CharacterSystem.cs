@@ -1,127 +1,23 @@
 using System.Collections.Frozen;
 using System.Numerics;
+using JoltPhysicsSharp;
 using Lark.Engine;
 using Lark.Engine.ecs;
-using Lark.Engine.physx;
-using Lark.Engine.physx.managers;
+using Lark.Engine.jolt.components;
+using Lark.Engine.jolt.managers;
+using Lark.Engine.jolt.systems;
 using Lark.Engine.std;
+using Lark.Engine.std.components;
 using Lark.Engine.std.systems;
-using Lark.Game.managers;
-using MagicPhysX;
+using Lark.Game.components;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using NodaTime;
-using Silk.NET.Maths;
 
 namespace Lark.Game.systems;
 
-public record struct CharacterComponent(float Speed, Guid TargetId) : ILarkComponent { }
-public record struct CharacterRotationComponent(Vector2 LastMousePosition, float TotalPitch, Quaternion Rotation) : ILarkComponent { }
-public record struct CharacterDisplacementComponent(Vector3 ForwardDelta, Vector3 BackwardDelta, Vector3 LeftDelta, Vector3 RightDelta, Vector3 JumpDelta) : ILarkComponent {
-  public readonly bool Dirty =>
-    ForwardDelta != Vector3.Zero ||
-    BackwardDelta != Vector3.Zero ||
-    LeftDelta != Vector3.Zero ||
-    RightDelta != Vector3.Zero ||
-    JumpDelta != Vector3.Zero;
-}
 
-public class CharacterSystem(ILogger<CharacterSystem> logger, EntityManager em, TimeManager tm, ActionManager am, AbilitySetManager asm, PhysxCharacterManager pcm, IOptions<GameSettings> gameSettings) : LarkSystem, ILarkSystemInit {
-  public override Type[] RequiredComponents => [typeof(CharacterComponent)];
-
-  // public Action<(Guid, FrozenSet<ILarkComponent>), FrozenSet<ILarkInput>> Move() => (entity, inputs) => {
-  //   var (key, components) = entity;
-  //   var (transform, displacement) = components.Get<TransformComponent, CharacterDisplacementComponent>();
-
-  //   var newDis = displacement with { };
-
-  //   em.UpdateEntityComponent(key, newDis);
-  // };
-
-  public Action<(Guid, FrozenSet<ILarkComponent>), FrozenSet<ILarkInput>> MoveForward() => (entity, inputs) => {
-    var (key, components) = entity;
-    var (transform, displacement) = components.Get<TransformComponent, CharacterDisplacementComponent>();
-
-    var newDis = displacement with { ForwardDelta = -Vector3.UnitZ };
-
-    em.UpdateEntityComponent(key, newDis);
-  };
-
-  public Action<(Guid, FrozenSet<ILarkComponent>), FrozenSet<ILarkInput>> MoveBackward() => (entity, inputs) => {
-    var (key, components) = entity;
-    var (transform, displacement) = components.Get<TransformComponent, CharacterDisplacementComponent>();
-
-    var newDis = displacement with { BackwardDelta = Vector3.UnitZ };
-
-    em.UpdateEntityComponent(key, newDis);
-  };
-
-  public Action<(Guid, FrozenSet<ILarkComponent>), FrozenSet<ILarkInput>> MoveLeft() => (entity, inputs) => {
-    var (key, components) = entity;
-    var (transform, displacement) = components.Get<TransformComponent, CharacterDisplacementComponent>();
-
-    var newDis = displacement with { LeftDelta = -Vector3.UnitX };
-
-    em.UpdateEntityComponent(key, newDis);
-  };
-
-  public Action<(Guid, FrozenSet<ILarkComponent>), FrozenSet<ILarkInput>> MoveRight() => (entity, inputs) => {
-    var (key, components) = entity;
-    var (transform, displacement) = components.Get<TransformComponent, CharacterDisplacementComponent>();
-
-    var newDis = displacement with { RightDelta = Vector3.UnitX };
-
-    em.UpdateEntityComponent(key, newDis);
-  };
-
-
-  public Action<(Guid, FrozenSet<ILarkComponent>), FrozenSet<ILarkInput>> UseAbility(string abilityName) {
-    return (entity, events) => {
-      var (key, components) = entity;
-      var trigger = components.GetList<TriggerAbility>();
-
-      var hasTrigger = trigger.Any(t => t.AbilityName == abilityName);
-
-      // If we have a trigger and the mouse is released then remove the trigger.
-      if (hasTrigger && LarkUtils.AnyMouseReleased(events)) {
-        logger.LogInformation("{abilityName} :: Released :: {frame}", abilityName, tm.TotalFrames);
-        em.RemoveEntityComponent(key, t => t is TriggerAbility ta && ta.AbilityName == abilityName);
-        return;
-      }
-
-      // If we have a trigger then we are already attacking.
-      if (hasTrigger) {
-        return;
-      }
-
-      // Trigger the ability if the mouse is pressed.
-      if (LarkUtils.AnyMousePressed(events)) {
-        logger.LogInformation("{abilityName} :: pressed :: {frame}", abilityName, tm.TotalFrames);
-        em.AddEntityComponent(key, new TriggerAbility(abilityName));
-      }
-    };
-  }
-
-  public Action<(Guid, FrozenSet<ILarkComponent>), FrozenSet<ILarkInput>> AltAttack() => UseAbility("AltAttack");
-  public Action<(Guid, FrozenSet<ILarkComponent>), FrozenSet<ILarkInput>> MainAttack() => UseAbility("MainAttack");
-
-  public Action<(Guid, FrozenSet<ILarkComponent>), FrozenSet<ILarkInput>> Jump() {
-    return (entity, inputs) => {
-      var (key, components) = entity;
-      logger.LogInformation("Jump :: Begin");
-      // var (transform, displacement) = components.Get<TransformComponent, CharacterDisplacementComponent>();
-
-      // If we have a jump component then we are already jumping
-      if (components.Has<CharacterJumpComponent>()) {
-        return;
-      }
-
-      logger.LogInformation("Jump :: Adding jump component");
-      var transform = components.Get<TransformComponent>();
-      var jump = new CharacterJumpComponent(CurveUtils.Jump, TimeSpan.FromSeconds(2), 1f, transform.Position);
-      em.AddEntityComponent(key, jump);
-    };
-  }
+public class CharacterSystem(ILogger<CharacterSystem> logger, EntityManager em, TimeManager tm, ActionManager am, JoltManager jm, IOptions<GameSettings> gameSettings) : LarkSystem, ILarkSystemInit {
+  public override Type[] RequiredComponents => [typeof(TransformComponent), typeof(JoltBodyInstanceComponent)];
 
   public Action<(Guid, FrozenSet<ILarkComponent>), FrozenSet<ILarkInput>> LookAt() {
     // One degree to radians
@@ -131,17 +27,14 @@ public class CharacterSystem(ILogger<CharacterSystem> logger, EntityManager em, 
 
     return (entity, inputs) => {
       var (key, components) = entity;
+      var character = components.Get<CharacterComponent>();
       var displacement = components.Get<CharacterRotationComponent>();
-      var transform = components.Get<TransformComponent>();
+      var (targetId, targetComponents) = em.GetEntity(character.PlayerId);
+      var targetTransform = targetComponents.Get<TransformComponent>();
+      var cameraTransform = components.Get<TransformComponent>();
 
-      // Sometimes the rotation is zero, so we need to set it to identity.
-      if (transform.Rotation == Quaternion.Zero) {
-        transform = transform with { Rotation = Quaternion.Identity };
-      }
-
-      // Get the current mouse position from the inputs
+      // Get the current and last mouse positions from the inputs
       var currentMousePosition = inputs.OfType<ILarkCursorInput>().Last().Position;
-      // Get the last mouse position
       var lastMousePosition = displacement.LastMousePosition;
 
       // If the last mouse position is zero then set it to the current mouse position. This happens when the game starts.
@@ -149,108 +42,141 @@ public class CharacterSystem(ILogger<CharacterSystem> logger, EntityManager em, 
         lastMousePosition = currentMousePosition;
       }
 
-      // sensitivity is in degrees. deltaMouse is in radians. So we need to convert the sensitivity to radians.
-      var fullSense = gameSettings.Value.MouseSensitivity * toRadians;
-
       // Calculate the delta mouse movement
-      var deltaMouseMovement = (currentMousePosition - lastMousePosition) * fullSense;
+      var deltaMouseMovement = (currentMousePosition - lastMousePosition) * gameSettings.Value.MouseSensitivity * toRadians;
 
-      var testPitch = displacement.TotalPitch - deltaMouseMovement.Y;
-      var newPitch = Math.Clamp(testPitch, minPitch, maxPitch) - displacement.TotalPitch;
+      // Calculate the yaw and pitch rotations
+      var yawRotation = Quaternion.CreateFromAxisAngle(-Vector3.UnitY, deltaMouseMovement.X);
+      var pitchRotation = Quaternion.CreateFromAxisAngle(Vector3.UnitX, deltaMouseMovement.Y);
 
+      // Clamp the pitch rotation
+      var totalPitch = Math.Clamp(displacement.TotalPitch - deltaMouseMovement.Y, minPitch, maxPitch) - displacement.TotalPitch;
+      pitchRotation = Quaternion.CreateFromAxisAngle(Vector3.UnitX, totalPitch);
 
-      var yawRotation = Quaternion.CreateFromAxisAngle(Vector3.UnitY, deltaMouseMovement.X);
-      var pitchRotation = Quaternion.CreateFromAxisAngle(Vector3.UnitX, newPitch);
+      logger.LogInformation("LookAt :: {key} :: {pitchRotation} :: {yawRotation} :: {playerRotation} :: {cameraRotation}", key, pitchRotation, yawRotation, targetTransform.Rotation * pitchRotation, cameraTransform.Rotation * yawRotation);
 
-      var newRotation = pitchRotation * transform.Rotation * yawRotation;
+      // Apply the yaw rotation to the player
+      var newTargetTransform = targetTransform with { Rotation = targetTransform.Rotation * yawRotation };
+      em.UpdateEntityComponent(targetId, newTargetTransform);
 
-      logger.LogInformation("Transform :: {key} :: {newRotation} :: {TotalPitch} :: {NewPitch}", key, newRotation, displacement.TotalPitch, newPitch);
+      // Apply the pitch rotation to the camera
+      var newCameraTransform = cameraTransform with { Rotation = cameraTransform.Rotation * pitchRotation };
+      em.UpdateEntityComponent(key, newCameraTransform);
 
       // Update the CharacterDisplacementComponent with the current mouse position
-      var updatedDisplacement = displacement with { LastMousePosition = currentMousePosition, Rotation = newRotation, TotalPitch = newPitch + displacement.TotalPitch };
+      var updatedDisplacement = displacement with { LastMousePosition = currentMousePosition, Rotation = newTargetTransform.Rotation, TotalPitch = totalPitch + displacement.TotalPitch };
       em.UpdateEntityComponent(key, updatedDisplacement);
     };
   }
 
+  public Action<(Guid, FrozenSet<ILarkComponent>), FrozenSet<ILarkInput>> Move(Dictionary<LarkKeys, Vector3> directionLookup) {
+    var LastFrame = 0;
+    return (entity, inputs) => {
+      var (key, components) = entity;
+      if (LastFrame == tm.TotalFrames) {
+        return;
+      }
+      LastFrame = tm.TotalFrames;
+
+      // Find every key in inputs that is in the directionLookup. We will then add all the directions together. We will then normalize the vector along the unit circle so that the character moves at the same speed in all directions.
+      var direction = inputs.OfType<ILarkKeyInput>().Where(k => directionLookup.ContainsKey(k.Key)).Select(k => directionLookup[k.Key]).Aggregate(Vector3.Zero, (acc, dir) => acc + dir);
+      // Normalize direction to the unit circle so that the character moves at the same speed in all directions.
+      direction = Vector3.Normalize(direction);
+
+      var modifier = components.Get<CharacterDisplacementComponent>();
+      var transform = components.Get<TransformComponent>();
+      modifier.Set(dir => dir * direction);
+
+      em.UpdateEntityComponent(key, modifier);
+
+      logger.LogInformation("{frame} :: Move :: {key} :: {direction} :: {position}", tm.TotalFrames, key, direction, transform.Position);
+    };
+  }
+
+  public static IEnumerable<ILarkComponent> BuildCharacter(Guid playerId, Guid bodyId, float speed = 5.0f) {
+    yield return new CharacterComponent(speed, playerId, bodyId);
+    yield return new CharacterRotationComponent() { Rotation = LarkUtils.CreateFromYawPitchRoll(90, 0, 0) };
+    yield return new CharacterDisplacementComponent();
+  }
+
+  public IEnumerable<ILarkComponent> BuildActions() {
+    yield return new ActionComponent("LookAt", LookAt());
+    // Todo: this assumes we are using wasd for movement. We should make this configurable.
+    yield return new ActionComponent("Move", Move(
+      new Dictionary<LarkKeys, Vector3> {
+        { LarkKeys.W, Vector3.UnitZ },
+        { LarkKeys.S, -Vector3.UnitZ },
+        { LarkKeys.A, Vector3.UnitX },
+        { LarkKeys.D, -Vector3.UnitX }
+      }
+    ));
+  }
+
   public Task Init() {
-
-    asm.CreateAbilitySet("Hero1");
-
-    asm.AddAbilityToSet("Hero1", "MainAttack", new HeroMainAttack(85f, .5f, 1f, 100f, Duration.FromMilliseconds(200), CurveUtils.Linear));
-    asm.AddAbilityToSet("Hero1", "AltAttack", new HeroAltAttack(85f, .5f, 20f, Duration.FromSeconds(3), Duration.FromSeconds(4), CurveUtils.LinearForward, CurveUtils.LinearForward));
-
-    am.AddActionToMap(ActionManager.DefaultMap, "MainAttack", new LarkMouseTrigger(LarkMouseButton.Left));
-    am.AddActionToMap(ActionManager.DefaultMap, "AltAttack", new LarkMouseTrigger(LarkMouseButton.Right));
     am.AddActionToMap(ActionManager.DefaultMap, "LookAt", new LarkCursorTrigger());
+    // Todo: this assumes we are using wasd for movement. We should make this configurable.
+    am.AddActionToMap(ActionManager.DefaultMap, "Move", new LarkMultiTrigger([
+      new LarkKeyTrigger(LarkKeys.W),
+      new LarkKeyTrigger(LarkKeys.S),
+      new LarkKeyTrigger(LarkKeys.A),
+      new LarkKeyTrigger(LarkKeys.D),
+    ]));
+
+    // Entity: Player (root entity, characterVirtual)
+    // -> Entity: Player::body (physics body)
+    // -> Entity: Player::camera (camera)
 
     var playerTransform = TransformComponent.Identity with {
-      Position = new(0, -1, 0),
-      Rotation = LarkUtils.CreateFromYawPitchRoll(0, 0, 0),
+      Position = new(0, -2.6f, 0),
+      Rotation = LarkUtils.CreateFromYawPitchRoll(-90, 0, 0),
     };
     var playerId = em.AddEntity(
       new MetadataComponent("Player-1"),
+      new MeshComponent("capsule/capsule.glb"),
       playerTransform,
-      new PhysxCharacterComponent(.5f, .95f)
+      new JoltCharacterComponent() {
+        Shape = new CapsuleShape(.5f, 1.0f),
+      }
     );
 
-    em.AddEntity([new MetadataComponent("Player-1::camera"),
-      playerTransform with {
-        Position = new(-2, -1, 0),
-        Rotation = LarkUtils.CreateFromYawPitchRoll(0, 0, 0)
-      },
+    var bodyId = em.AddEntity([
+      new MetadataComponent("Player-1::body"),
+      new LarkIgnoreWarningComponent(JoltConstraintSystem.MissingConstraintError, "Because we use a virtual character we don't have a BodyID."),
+      TransformComponent.Identity,
       new LarkSceneGraphComponent(playerId),
-      new CameraComponent() with { Active = true },
-      new ActiveAbilitySet("Hero1"),
-      ..BuildActions(),
-      ..BuildCharacter(playerId)
+      new JoltBodyComponent() {
+        Shape = new CapsuleShapeSettings(.45f, .95f),
+        MotionType = MotionType.Kinematic,
+        ObjectLayer = Layers.Character
+      },
     ]);
+
+    em.AddEntity([new MetadataComponent("Player-1::camera"),
+      TransformComponent.Identity,
+      // new LarkSceneGraphComponent(playerId),
+      new CameraComponent() with { Active = true },
+      new JoltCameraTransformComponent() {
+        Position = new(-2, 0, 0),
+        Rotation = LarkUtils.CreateFromYawPitchRoll(-180, 0, 0)
+      },
+      new JoltBodyComponent() {
+        Shape = new SphereShapeSettings(.1f),
+        MotionType = MotionType.Kinematic,
+        ObjectLayer = Layers.Character
+      },
+      // new ActiveAbilitySet("Hero1"),
+      ..BuildActions(),
+      ..BuildCharacter(playerId, bodyId)
+    ]);
+
+    logger.LogInformation("Player Created");
 
     return Task.CompletedTask;
   }
 
-  public IEnumerable<ILarkComponent> BuildActions() {
-    // yield return new ActionComponent("Jump", Jump());
-    yield return new ActionComponent("MainAttack", MainAttack());
-    yield return new ActionComponent("AltAttack", AltAttack());
-    yield return new ActionComponent("LookAt", LookAt());
-    yield return new ActionComponent("MoveForward", MoveForward());
-    yield return new ActionComponent("MoveBackward", MoveBackward());
-    yield return new ActionComponent("MoveLeft", MoveLeft());
-    yield return new ActionComponent("MoveRight", MoveRight());
-  }
+}
 
-  public IEnumerable<ILarkComponent> BuildCharacter(Guid targetId, float speed = 0.01f) {
-    yield return new CharacterComponent(speed, targetId);
-    yield return new CharacterRotationComponent();
-    yield return new CharacterDisplacementComponent();
-  }
-
-  public override void Update((Guid, FrozenSet<ILarkComponent>) Entity) {
-    var (key, components) = Entity;
-
-    var displacement = components.Get<CharacterDisplacementComponent>();
-    if (displacement.Dirty) {
-      var charBase = components.Get<CharacterComponent>();
-
-      // Sum the charBase displacements and normalize.
-      var displacementVector = Vector3.Normalize(displacement.ForwardDelta + displacement.BackwardDelta + displacement.LeftDelta + displacement.RightDelta);
-      // if displacementVector is nan, set it to zero
-
-      if (float.IsNaN(displacementVector.X) || float.IsNaN(displacementVector.Y) || float.IsNaN(displacementVector.Z)) {
-        displacementVector = Vector3.Zero;
-      }
-
-      displacementVector *= charBase.Speed * (float)tm.DeltaTime.TotalMilliseconds;
-
-      // Dont normalize the jump delta.
-      displacementVector += displacement.JumpDelta;
-
-      // displacementVector is relative to forward, so we need to transform it to world space.
-      var transform = components.Get<TransformComponent>();
-      displacementVector = Vector3.Transform(displacementVector, transform.Rotation);
-
-      pcm.Move(charBase.TargetId, displacementVector, (float)tm.DeltaTime.TotalMilliseconds);
-      em.UpdateEntityComponent(key, new CharacterDisplacementComponent());
-    }
-  }
+public record struct JoltCameraTransformComponent : ILarkComponent {
+  public Vector3 Position { get; init; }
+  public Quaternion Rotation { get; init; }
 }

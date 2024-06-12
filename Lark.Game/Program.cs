@@ -10,11 +10,13 @@ builder.Services
   .AddVulkanPipeline()
   .AddLarkECS()
   .AddLarkSTD()
-  .AddLarkPhysx(builder.Configuration)
-  .AddLarkUltralight(builder.Configuration)
+  .AddLarkJolt()
+  // .AddLarkPhysx(builder.Configuration)
+  // .AddLarkUltralight(builder.Configuration)
   .AddGameSystems()
   .AddSerilog(new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
+    .WriteTo.Trace()
     .CreateLogger());
 
 var host = builder.Build();

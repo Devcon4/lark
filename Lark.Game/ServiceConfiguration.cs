@@ -11,21 +11,16 @@ public static class ServiceConfiguration {
   // AddGameSystems
   public static IServiceCollection AddGameSystems(this IServiceCollection services) {
 
+    // services.AddLarkSystem<HeroMainAttackSystem>();
+    // services.AddLarkSystem<HeroAltAttackSystem>();
+
     services.AddLarkSystem<InitSystem>();
-    services.AddLarkSystem<JumpSystem>();
-    services.AddLarkSystem<VelocitySystem>();
-    services.AddLarkSystem<PhysxInitSystem>();
-
-    services.AddLarkSystem<HeroMainAttackSystem>();
-    services.AddLarkSystem<HeroAltAttackSystem>();
-
     services.AddLarkSystem<CharacterSystem>();
-    services.AddLarkSystem<CharacterTransformSystem>();
-    services.AddLarkSystem<CharacterJumpSystem>();
+    services.AddLarkSystem<CharacterDisplacementSystem>();
 
-    services.AddLarkManager<AbilitySetManager>();
-    services.AddLarkSystem<CastAbilitySystem>();
-    services.AddLarkSystem<CastInstanceSystem>();
+    // services.AddLarkManager<AbilitySetManager>();
+    // services.AddLarkSystem<CastAbilitySystem>();
+    // services.AddLarkSystem<CastInstanceSystem>();
     return services;
   }
 }
