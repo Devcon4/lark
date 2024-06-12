@@ -6,10 +6,12 @@
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>preview</LangVersion>
+    <PublishSingleFile>true</PublishSingleFile>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="ImpromptuNinjas.UltralightSharp" Version="1.2.0-beta-r11" />
+    <PackageReference Include="JoltPhysicsSharp" Version="2.5.3" />
     <!-- <PackageReference Include="MagicPhysX" Version="1.0.0" /> -->
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="7.0.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="7.0.1" />
@@ -27,6 +29,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\MagicPhysX\src\MagicPhysX\MagicPhysX.csproj" />
+    <!-- <ProjectReference Include="..\..\MagicPhysX\src\MagicPhysX\MagicPhysX.csproj" /> Only needed for Physx -->
   </ItemGroup>
 </Project>

@@ -1,6 +1,5 @@
 ﻿using System.Diagnostics;
 using Lark.Engine.ecs;
-using Lark.Engine.physx.managers;
 using Lark.Engine.pipeline;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;

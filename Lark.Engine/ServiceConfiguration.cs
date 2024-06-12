@@ -1,7 +1,8 @@
 using Lark.Engine.ecs;
+using Lark.Engine.jolt;
+using Lark.Engine.jolt.managers;
+using Lark.Engine.jolt.systems;
 using Lark.Engine.Model;
-using Lark.Engine.physx.managers;
-using Lark.Engine.physx.systems;
 using Lark.Engine.pipeline;
 using Lark.Engine.std;
 using Lark.Engine.std.systems;
@@ -49,30 +50,43 @@ public static class ServiceConfiguration {
     return services;
   }
 
-  public static IServiceCollection AddLarkPhysx(this IServiceCollection services, IConfiguration configuration) {
-    services.AddSingleton<ILarkModule, PhysxModule>();
+  public static IServiceCollection AddLarkJolt(this IServiceCollection services) {
+    services.AddLarkModule<JoltModule>();
+    services.AddLarkManager<JoltManager>();
 
-    services.Configure<LarkPhysxConfig>(configuration.GetSection("LarkPhysx"));
-
-    services.AddSingleton<PhysxData>();
-    services.AddLarkManager<PhysxManager>();
-    services.AddLarkManager<PhysxColliderManager>();
-    services.AddLarkManager<PhysxCharacterManager>();
-
-    // services.AddLarkSystem<PhysxWorldSystem>();
-
-    services.AddLarkSystem<PhysxPlaneSystem>();
-    services.AddLarkSystem<PhysxBoxSystem>();
-    services.AddLarkSystem<PhysxCapsuleSystem>();
-    services.AddLarkSystem<PhysxSphereSystem>();
-
-    services.AddLarkSystem<PhysxMaterialSystem>();
-    services.AddLarkSystem<PhysxTransformSystem>();
-    services.AddLarkSystem<PhysxRigidbodySystem>();
-    services.AddLarkSystem<PhysxCharacterSystem>();
+    services.AddLarkSystem<JoltBodySystem>();
+    services.AddLarkSystem<JoltTransformSystem>();
+    services.AddLarkSystem<JoltCharacterSystem>();
+    services.AddLarkSystem<JoltConstraintSystem>();
+    services.AddLarkSystem<JoltCharacterTransformSystem>();
 
     return services;
   }
+
+  // public static IServiceCollection AddLarkPhysx(this IServiceCollection services, IConfiguration configuration) {
+  //   services.AddSingleton<ILarkModule, PhysxModule>();
+
+  //   services.Configure<LarkPhysxConfig>(configuration.GetSection("LarkPhysx"));
+
+  //   services.AddSingleton<PhysxData>();
+  //   services.AddLarkManager<PhysxManager>();
+  //   services.AddLarkManager<PhysxColliderManager>();
+  //   services.AddLarkManager<PhysxCharacterManager>();
+
+  //   // services.AddLarkSystem<PhysxWorldSystem>();
+
+  //   services.AddLarkSystem<PhysxPlaneSystem>();
+  //   services.AddLarkSystem<PhysxBoxSystem>();
+  //   services.AddLarkSystem<PhysxCapsuleSystem>();
+  //   services.AddLarkSystem<PhysxSphereSystem>();
+
+  //   services.AddLarkSystem<PhysxMaterialSystem>();
+  //   services.AddLarkSystem<PhysxTransformSystem>();
+  //   services.AddLarkSystem<PhysxRigidbodySystem>();
+  //   services.AddLarkSystem<PhysxCharacterSystem>();
+
+  //   return services;
+  // }
 
   public static IServiceCollection AddLarkEngine(this IServiceCollection services, IConfiguration configuration) {
     services.AddSingleton<Engine>();
@@ -88,11 +102,11 @@ public static class ServiceConfiguration {
 
   public static IServiceCollection AddLarkSTD(this IServiceCollection services) {
     services.AddLarkSystem<RenderSystem>();
-    services.AddLarkSystem<CameraSystem>();
     services.AddLarkSystem<InputSystem>();
     services.AddLarkSystem<CurrentKeySystem>();
     services.AddLarkSystem<SceneGraphSystem>();
     services.AddLarkSystem<GlobalTransformSystem>();
+    services.AddLarkSystem<CameraSystem>();
 
     services.AddSingleton<IClock>(SystemClock.Instance);
     services.AddLarkManager<TimeManager>();
