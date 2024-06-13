@@ -4,48 +4,10 @@ using Microsoft.Extensions.Logging;
 using Silk.NET.Core.Native;
 using Silk.NET.Vulkan;
 using ImpromptuNinjas.UltralightSharp;
-using System.Runtime.InteropServices;
 using Lark.Engine.Model;
 
 namespace Lark.Engine.Ultralight;
 
-public interface ILarkPipeline {
-  void Start();
-  void Draw(uint index);
-  void Update(uint index);
-  void Cleanup();
-
-  PipelineData Data { get; set; }
-}
-public class PipelineData {
-  public RenderPass RenderPass;
-  public PipelineLayout PipelineLayout;
-  public Pipeline Pipeline;
-
-  public Framebuffer[] Framebuffers = [];
-  public Dictionary<string, DescriptorSetLayout> DescriptorSetLayouts = [];
-  public DescriptorPool DescriptorPool;
-}
-
-public abstract class LarkPipeline : ILarkPipeline {
-  public PipelineData Data { get; set; } = new();
-  public HashSet<MemoryHandle> MemoryHandles { get; set; } = [];
-  public virtual void Start() { }
-  public virtual void Draw(uint index) { }
-  public virtual void Update(uint index) { }
-  public virtual void Cleanup() {
-    foreach (var handle in MemoryHandles) {
-      handle.Dispose();
-    }
-  }
-
-  protected (MemoryHandle, uint) RegisterMemory<T>(T[] data) {
-    var mem = new Memory<T>(data);
-    var memHandle = mem.Pin();
-    MemoryHandles.Add(memHandle);
-    return (memHandle, (uint)mem.Length);
-  }
-}
 
 public class UltralightPipeline(UltralightController controller, BufferUtils bufferUtils, ImageUtils imageUtils, ShaderBuilder shaderBuilder, LarkVulkanData shareData, ILogger<UltralightPipeline> logger) : LarkPipeline {
 
@@ -367,7 +329,6 @@ public class UltralightPipeline(UltralightController controller, BufferUtils buf
     var shaderStages = stackalloc[] { vertShaderStageInfo, fragShaderStageInfo };
 
     // Don't think we would have the usual vertex bindings here given we just have a quad
-    var setLayouts = new[] { Data.DescriptorSetLayouts["Textures"] };
     var (setLayoutsMem, setLayoutsSize) = RegisterMemory(Data.DescriptorSetLayouts.Values.ToArray());
 
     var viewport = new Viewport {

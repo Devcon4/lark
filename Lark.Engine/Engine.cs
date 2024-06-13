@@ -23,7 +23,7 @@ public class EcsModule(SystemManager systemManager) : ILarkModule {
   }
 }
 
-public partial class Engine(LarkWindow larkWindow, IEnumerable<ILarkModule> modules, IEnumerable<ILarkManager> managers, ILogger<Engine> logger, IOptionsMonitor<GameSettings> gameSettings, IHostApplicationLifetime hostLifetime) {
+public partial class Engine(LarkWindow larkWindow, IEnumerable<ILarkModule> modules, IEnumerable<ILarkManager> managers, ILogger<Engine> logger, IOptionsMonitor<GameSettings> gameSettings) {
   public void Run(CancellationToken cancellationToken) {
     logger.LogInformation("Running engine... {thread}", Environment.CurrentManagedThreadId);
     larkWindow.Build();

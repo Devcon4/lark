@@ -11,12 +11,7 @@ public class SwapchainSegment(LarkVulkanData data,
     SwapchainSupportUtil swapchainSupportUtil,
     QueueFamilyUtil queueFamilyUtil,
     ImageViewSegment imageViewSegment,
-    RenderPassSegment renderPassSegment,
-    GraphicsPipelineSegment graphicsPipelineSegment,
-    DepthSegment depthSegment,
-    FramebufferSegment framebufferSegment,
     UniformBufferSegment uniformBufferSegment,
-    DescriptorSetSegment descriptorSetSegment,
     ModelUtils modelUtils,
     CommandBufferSegment commandBufferSegment,
     ILogger<SwapchainSegment> logger
@@ -39,12 +34,13 @@ public class SwapchainSegment(LarkVulkanData data,
       larkWindow.DoEvents();
     }
 
+    // TODO: Recrating the swapchain is broken currently. This means resizing the window will explode.
     CreateSwapChain();
     imageViewSegment.CreateImageViews();
-    renderPassSegment.CreateRenderPass();
-    graphicsPipelineSegment.CreateGraphicsPipeline();
-    depthSegment.CreateDepthResources();
-    framebufferSegment.CreateFramebuffers();
+    // renderPassSegment.CreateRenderPass();
+    // graphicsPipelineSegment.CreateGraphicsPipeline();
+    // depthSegment.CreateDepthResources();
+    // framebufferSegment.CreateFramebuffers();
     uniformBufferSegment.CreateUniformBuffer();
     // descriptorSetSegment.CreateDescriptorPool();
     // descriptorSetSegment.CreateDescriptorSets();
@@ -146,21 +142,21 @@ public class SwapchainSegment(LarkVulkanData data,
   }
 
   public unsafe void CleanupSwapchain() {
-    data.vk.DestroyImageView(data.Device, data.DepthImageView, null);
-    data.vk.DestroyImage(data.Device, data.DepthImage, null);
-    data.vk.FreeMemory(data.Device, data.DepthImageMemory, null);
+    // data.vk.DestroyImageView(data.Device, data.DepthImageView, null);
+    // data.vk.DestroyImage(data.Device, data.DepthImage, null);
+    // data.vk.FreeMemory(data.Device, data.DepthImageMemory, null);
 
-    foreach (var framebuffer in data.SwapchainFramebuffers) {
-      data.vk.DestroyFramebuffer(data.Device, framebuffer, null);
-    }
+    // foreach (var framebuffer in data.SwapchainFramebuffers) {
+    //   data.vk.DestroyFramebuffer(data.Device, framebuffer, null);
+    // }
 
     fixed (CommandBuffer* buffers = data.CommandBuffers) {
       data.vk.FreeCommandBuffers(data.Device, data.CommandPool, (uint)data.CommandBuffers.Length, buffers);
     }
 
-    data.vk.DestroyPipeline(data.Device, data.GraphicsPipeline, null);
-    data.vk.DestroyPipelineLayout(data.Device, data.PipelineLayout, null);
-    data.vk.DestroyRenderPass(data.Device, data.RenderPass, null);
+    // data.vk.DestroyPipeline(data.Device, data.GraphicsPipeline, null);
+    // data.vk.DestroyPipelineLayout(data.Device, data.PipelineLayout, null);
+    // data.vk.DestroyRenderPass(data.Device, data.RenderPass, null);
 
     foreach (var imageView in data.SwapchainImageViews) {
       data.vk.DestroyImageView(data.Device, imageView, null);

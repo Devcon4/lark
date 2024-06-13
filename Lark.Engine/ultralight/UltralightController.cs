@@ -13,7 +13,7 @@ public class UltralightStatus {
   public TaskCompletionSource Initialized { get; } = new TaskCompletionSource();
 }
 
-public unsafe class UltralightController(ILogger<UltralightController> logger, IOptions<UltralightConfig> options, TimeManager tm, UltralightStatus status, IHostEnvironment env) {
+public unsafe class UltralightController(ILogger<UltralightController> logger, TimeManager tm, UltralightStatus status, IHostEnvironment env) {
   private Config* _config;
   private Renderer* _renderer;
   private Session* _session;

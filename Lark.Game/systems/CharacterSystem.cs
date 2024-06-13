@@ -16,7 +16,7 @@ using Microsoft.Extensions.Options;
 namespace Lark.Game.systems;
 
 
-public class CharacterSystem(ILogger<CharacterSystem> logger, EntityManager em, TimeManager tm, ActionManager am, JoltManager jm, IOptions<GameSettings> gameSettings) : LarkSystem, ILarkSystemInit {
+public class CharacterSystem(ILogger<CharacterSystem> logger, EntityManager em, TimeManager tm, ActionManager am, IOptions<GameSettings> gameSettings) : LarkSystem, ILarkSystemInit {
   public override Type[] RequiredComponents => [typeof(TransformComponent), typeof(JoltBodyInstanceComponent)];
 
   public Action<(Guid, FrozenSet<ILarkComponent>), FrozenSet<ILarkInput>> LookAt() {
@@ -132,12 +132,22 @@ public class CharacterSystem(ILogger<CharacterSystem> logger, EntityManager em, 
     };
     var playerId = em.AddEntity(
       new MetadataComponent("Player-1"),
-      new MeshComponent("capsule/capsule.glb"),
+      // new MeshComponent("capsule/capsule.glb"),
       playerTransform,
       new JoltCharacterComponent() {
         Shape = new CapsuleShape(.5f, 1.0f),
       }
     );
+
+    var meshId = em.AddEntity([
+      new MetadataComponent("Player-1::mesh"),
+      new MeshComponent("damagedHelmet/DamagedHelmet.glb"),
+      // new LarkSceneGraphComponent(playerId),
+      playerTransform with {
+        Position = new(0, -2, 0),
+        Rotation = LarkUtils.CreateFromYawPitchRoll(0, 180, 90),
+       },
+    ]);
 
     var bodyId = em.AddEntity([
       new MetadataComponent("Player-1::body"),

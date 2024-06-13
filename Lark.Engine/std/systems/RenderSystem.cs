@@ -8,8 +8,6 @@ using Lark.Engine.pipeline;
 using Microsoft.Extensions.Logging;
 using Silk.NET.Maths;
 
-using SkiaSharp;
-
 namespace Lark.Engine.std;
 
 public class RenderSystem(ILogger<RenderSystem> logger, EntityManager em, TimeManager tm, LarkVulkanData data, ModelUtils modelUtils) : LarkSystem, ILarkSystemInit, ILarkSystemBeforeDraw {

@@ -13,24 +13,15 @@ public class VulkanBuilder(
     LarkVulkanData data,
     InstanceSegment instanceSegment,
     DebugSegment debugSegment,
-    DescriptorSetSegment descriptorSetSegment,
     SurfaceSegment surfaceSegment,
     PhysicalDeviceSegment physicalDeviceSegment,
     LogicalDeviceSegment logicalDeviceSegment,
     SwapchainSegment swapchainSegment,
     UniformBufferSegment uniformBufferSegment,
     ImageViewSegment imageViewSegment,
-    RenderPassSegment renderPassSegment,
-    GraphicsPipelineSegment graphicsPipelineSegment,
-    FramebufferSegment framebufferSegment,
-    TextureSegment textureSegment,
-    SamplerSegment samplerSegment,
     CommandPoolSegment commandPoolSegment,
     CommandBufferSegment commandBufferSegment,
     SyncSegment syncSegment,
-    MeshBufferSegment meshBufferSegment,
-    DepthSegment depthSegment,
-    ModelUtils modelUtils,
     TimeManager timeManager,
     IEnumerable<ILarkPipeline> pipelines
     ) {
@@ -45,39 +36,13 @@ public class VulkanBuilder(
     logicalDeviceSegment.CreateLogicalDevice();
     swapchainSegment.CreateSwapChain();
     imageViewSegment.CreateImageViews();
-    renderPassSegment.CreateRenderPass();
-    descriptorSetSegment.CreateDescriptorSetLayouts();
-    // descriptorSetSegment.CreateDescriptorSetLayout();
-    graphicsPipelineSegment.CreateGraphicsPipeline();
     commandPoolSegment.CreateCommandPool();
-    depthSegment.CreateDepthResources();
-
-    framebufferSegment.CreateFramebuffers();
-    textureSegment.CreateTextureImage();
-    textureSegment.CreateTextureImageView();
-    samplerSegment.CreateTextureSampler();
-
     uniformBufferSegment.CreateUniformBuffer();
-    // descriptorSetSegment.CreateDescriptorPool();
-    // descriptorSetSegment.CreateDescriptorSets();
     syncSegment.CreateSyncObjects();
 
-    foreach (var pipeline in pipelines) {
+    foreach (var pipeline in pipelines.OrderByDescending(p => p.Priority)) {
       pipeline.Start();
     }
-
-    // data.cameras.Add(LarkCamera.DefaultCamera());
-
-    // data.models.Add(modelUtils.LoadFile("damagedHelmet/DamagedHelmet.glb"));
-    // data.models.Add(modelUtils.LoadFile("damagedHelmet/DamagedHelmet.gltf"));
-    // data.models.Add(modelUtils.LoadFile("fish/BarramundiFish.gltf"));
-    // data.models.Add(modelUtils.LoadFile("boxTextured/BoxTextured.glb"));
-    // data.models.Add(modelUtils.LoadFile("materialsVariantsShoe/MaterialsVariantsShoe.glb"));
-
-    // data.models.Add(modelUtils.LoadFile("orientationTest/OrientationTest.glb"));
-    // data.models.Add(modelUtils.LoadFile("antiqueCamera/AntiqueCamera.gltf"));
-    // data.models.Add(modelUtils.LoadFile("metalRoughSpheres/MetalRoughSpheres.glb"));
-    // data.models.Add(modelUtils.LoadFile("stainedGlassLamp/gLTF/StainedGlassLamp.gltf"));
 
     commandBufferSegment.CreateCommandBuffers();
   }
@@ -92,30 +57,12 @@ public class VulkanBuilder(
       model.Dispose(data);
     }
 
-    foreach (var pipeline in pipelines) {
+    foreach (var pipeline in pipelines.OrderByDescending(p => p.Priority)) {
       pipeline.Cleanup();
     }
 
     uniformBufferSegment.CleanupUniformBuffers();
     swapchainSegment.CleanupSwapchain();
-
-    data.vk.DestroySampler(data.Device, data.TextureSampler, null);
-    data.vk.DestroyImageView(data.Device, data.TextureImageView, null);
-
-    data.vk.DestroyImage(data.Device, data.TextureImage, null);
-    data.vk.FreeMemory(data.Device, data.TextureImageMemory, null);
-
-    data.vk.DestroyDescriptorSetLayout(data.Device, data.Layouts.matricies, null);
-    data.vk.DestroyDescriptorSetLayout(data.Device, data.Layouts.textures, null);
-
-    // Destroy descriptor set layout
-    // data.vk.DestroyDescriptorSetLayout(data.Device, data.DescriptorSetLayout, null);
-
-    // data.vk.DestroyBuffer(data.Device, data.IndexBuffer, null);
-    // data.vk.FreeMemory(data.Device, data.IndexBufferMemory, null);
-
-    // data.vk.DestroyBuffer(data.Device, data.VertexBuffer, null);
-    // data.vk.FreeMemory(data.Device, data.VertexBufferMemory, null);
 
     for (var i = 0; i < LarkVulkanData.MaxFramesInFlight; i++) {
       data.vk.DestroySemaphore(data.Device, data.RenderFinishedSemaphores[i], null);
@@ -152,27 +99,6 @@ public class VulkanBuilder(
 
     logger.LogInformation("{frame} :: RenderCamera position :: {position}", timeManager.TotalFrames, renderingCamera.Transform.Translation);
 
-    // camera.SetPosition(new Vector3D<float>(5, 0, 0));
-    // camera.SetRotation(new Vector3D<float>(0, -1, 0), 270);
-    // camera.SetFov(45f);
-    // // camera.Transform.RotateByAxisAndAngle(new Vector3D<float>(0, 1, 0), (float)deltaTime.TotalSeconds * .9f);
-    // camera.SetAspectRatio((float)data.SwapchainExtent.Width / data.SwapchainExtent.Height);
-    // vector from quaternion
-
-    // var theta = Math.Acos(camera.Transform.Rotation.W) * 2;
-    // var ax = camera.Transform.Rotation.X / Math.Sin(theta / 2);
-    // var ay = camera.Transform.Rotation.Y / Math.Sin(theta / 2);
-    // var az = camera.Transform.Rotation.Z / Math.Sin(theta / 2);
-    // // split angle and axis
-    // var angle = theta * 180 / Math.PI;
-    // var axis = new Vector3D<float>((float)ax, (float)ay, (float)az);
-
-    // firstModel.Transform.Translation = new Vector3D<float>(0, 0, 0);
-    // firstModel.Transform.Scale = new Vector3D<float>(1, 1, 1);
-
-    // data.cameras[0] = camera;
-    // log ubo.
-
     // logger.LogInformation("{currentF} \t:: Δ {deltaTime}ms \t:: {fps}", currentF, deltaTime.TotalMilliseconds, fps);
 
     data.vk.WaitForFences(data.Device, 1, data.InFlightFences[data.CurrentFrame], true, ulong.MaxValue);
@@ -191,7 +117,7 @@ public class VulkanBuilder(
       data.vk.WaitForFences(data.Device, 1, data.ImagesInFlight[imageIndex], true, ulong.MaxValue);
     }
 
-    foreach (var pipeline in pipelines) {
+    foreach (var pipeline in pipelines.OrderByDescending(p => p.Priority)) {
       pipeline.Update(imageIndex);
     }
 

@@ -21,8 +21,8 @@ public class TimeManager(ILogger<TimeManager> logger, IClock Clock) : LarkManage
 
   public Instant Now => Clock.GetCurrentInstant();
 
-  private IDisposable frameContext;
-  private IDisposable fpsContext;
+  private IDisposable frameContext = null!;
+  private IDisposable fpsContext = null!;
 
   public void Update() {
     var now = Clock.GetCurrentInstant();

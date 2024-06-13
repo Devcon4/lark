@@ -9,7 +9,7 @@ public record struct InputEntityMarker : ILarkComponent { }
 
 public record struct ActionComponent(ActionName ActionName, Action<ValueTuple<Guid, FrozenSet<ILarkComponent>>, FrozenSet<ILarkInput>> Callback) : ILarkComponent { }
 
-public class InputSystem(EntityManager em, ILogger<InputSystem> logger) : LarkSystem, ILarkSystemAfterUpdate {
+public class InputSystem(EntityManager em) : LarkSystem, ILarkSystemAfterUpdate {
   public override Type[] RequiredComponents => [
     typeof(SystemComponent),
     typeof(InputEntityMarker)

@@ -2,7 +2,7 @@ using Lark.Engine.pipeline;
 using Silk.NET.Vulkan;
 using Image = Silk.NET.Vulkan.Image;
 
-namespace Lark.Engine.Model;
+namespace Lark.Engine.pipeline;
 
 public struct LarkImage {
   public Image Image;

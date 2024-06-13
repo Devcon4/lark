@@ -44,10 +44,17 @@ public class SystemManager(
       }
     });
 
+    // suppressing for now, we intentionally want to not await this with the current setup.
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+
     var _ = Task.Run(async () => {
       Task.WhenAll(systemInits).Wait();
       Task.WhenAll(syncSystemInits).Wait();
     });
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
+
+
+    await Task.CompletedTask;
   }
 
   private readonly BoundedChannelOptions options = new(100000) {

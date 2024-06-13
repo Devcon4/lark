@@ -32,7 +32,8 @@ public static class ServiceConfiguration {
   }
 
   public static IServiceCollection AddLarkPipeline<T>(this IServiceCollection services) where T : class, ILarkPipeline {
-    services.AddSingleton<ILarkPipeline, T>();
+    services.AddSingleton<T>();
+    services.AddSingleton<ILarkPipeline, T>(sp => sp.GetRequiredService<T>());
     return services;
   }
 
@@ -149,20 +150,14 @@ public static class ServiceConfiguration {
     services.AddSingleton<SwapchainSegment>();
     services.AddSingleton<UniformBufferSegment>();
     services.AddSingleton<ImageViewSegment>();
-    services.AddSingleton<RenderPassSegment>();
-    services.AddSingleton<DescriptorSetSegment>();
-    services.AddSingleton<GraphicsPipelineSegment>();
-    services.AddSingleton<FramebufferSegment>();
-    services.AddSingleton<TextureSegment>();
-    services.AddSingleton<SamplerSegment>();
     services.AddSingleton<CommandPoolSegment>();
     services.AddSingleton<CommandBufferSegment>();
     services.AddSingleton<SyncSegment>();
-    services.AddSingleton<MeshBufferSegment>();
-    services.AddSingleton<DepthSegment>();
 
     services.AddSingleton<ModelUtils>();
     services.AddSingleton<ModelBuilder>();
+
+    services.AddLarkPipeline<PBRPipeline>();
 
     return services;
   }

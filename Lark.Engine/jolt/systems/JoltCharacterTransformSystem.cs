@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Lark.Engine.jolt.systems;
 
-public class JoltCharacterTransformSystem(EntityManager em, JoltManager jm, ILogger<JoltCharacterTransformSystem> logger, SceneGraphManager sm) : LarkSystem, ILarkSystemAfterUpdate {
+public class JoltCharacterTransformSystem(EntityManager em, JoltManager jm, ILogger<JoltCharacterTransformSystem> logger) : LarkSystem, ILarkSystemAfterUpdate {
   public override Type[] RequiredComponents => [typeof(JoltCharacterInstance), typeof(TransformComponent)];
 
   public void AfterUpdate() {

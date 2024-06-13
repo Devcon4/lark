@@ -2,6 +2,8 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Silk.NET.Vulkan;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 using Buffer = Silk.NET.Vulkan.Buffer;
 using Image = Silk.NET.Vulkan.Image;
 
@@ -17,7 +19,7 @@ public class ImageUtils(LarkVulkanData data, BufferUtils bufferUtils, CommandUti
   }
 
   public unsafe void CreateTexture(string textureName, ref Image image, ref DeviceMemory imageMemory) {
-    var fullPath = Path.Join(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), $"./resources/textures/{textureName}");
+    var fullPath = Path.Join(Path.GetDirectoryName(AppContext.BaseDirectory), $"./resources/textures/{textureName}");
 
     if (!File.Exists(fullPath)) {
       throw new FileNotFoundException($"Texture {textureName} does not exist at {fullPath}");

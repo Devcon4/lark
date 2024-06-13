@@ -7,7 +7,7 @@ namespace Lark.Engine {
   // Waiting for Silk.NET 2.18.0 which will have spirv support.
   public class ShaderBuilder(ILogger<ShaderBuilder> logger) {
     public byte[] LoadShader(string shaderName) {
-      var path = Path.Join(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), $"./resources/shaders/{shaderName}.spv");
+      var path = Path.Join(Path.GetDirectoryName(AppContext.BaseDirectory), $"./resources/shaders/{shaderName}.spv");
 
       if (!File.Exists(path)) {
         logger.LogError("Shader {ShaderName} does not exist at {ShaderPath}", shaderName, path);

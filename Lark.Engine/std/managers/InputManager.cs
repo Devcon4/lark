@@ -7,7 +7,7 @@ using Silk.NET.GLFW;
 
 namespace Lark.Engine.std;
 
-public class InputManager(ILogger<InputManager> logger, LarkWindow window, EntityManager em, ActionManager am) : LarkManager {
+public class InputManager(LarkWindow window, EntityManager em) : LarkManager {
 
   public static readonly Type[] InputEntity = [
     typeof(SystemComponent),

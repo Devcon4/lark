@@ -11,11 +11,6 @@ using System.Collections.Concurrent;
 
 namespace Lark.Engine.pipeline;
 
-public struct DescriptorLayouts {
-  public DescriptorSetLayout matricies;
-  public DescriptorSetLayout textures;
-}
-
 public class LarkVulkanData {
   public Stopwatch sw = new();
 
@@ -42,46 +37,13 @@ public class LarkVulkanData {
   public Format SwapchainImageFormat;
   public Extent2D SwapchainExtent;
   public ImageView[] SwapchainImageViews = null!;
-  public Framebuffer[] SwapchainFramebuffers = null!;
-
-  public RenderPass RenderPass;
-  public DescriptorLayouts Layouts;
-
-  public PipelineLayout PipelineLayout;
-  public Silk.NET.Vulkan.Pipeline GraphicsPipeline;
-
-  // public Buffer VertexBuffer;
-  // public DeviceMemory VertexBufferMemory;
-  // public Buffer IndexBuffer;
-  // public DeviceMemory IndexBufferMemory;
-
-  public Image NormalImage;
-  public DeviceMemory NormalImageMemory;
-  public ImageView NormalImageView;
-  public Sampler NormalSampler;
-
-  public Image TextureImage;
-  public DeviceMemory TextureImageMemory;
-  public ImageView TextureImageView;
-  public Sampler TextureSampler;
-
-  public Image DepthImage;
-  public DeviceMemory DepthImageMemory;
-  public ImageView DepthImageView;
-
-
   public CommandPool CommandPool;
   public DescriptorPool DescriptorPool;
   public DescriptorSet[] DescriptorSets = null!;
 
   public Image[] SwapChainImages = null!;
 
-  public LarkBuffer[] UniformBuffers;
-
-  // public Buffer[] UniformBuffers = null!;
-  // public DeviceMemory[] UniformBuffersMemory = null!;
-  // public unsafe void*[] UniformBuffersMapped = null!;
-
+  public LarkBuffer[] UniformBuffers = null!;
   public CommandBuffer[] CommandBuffers = null!;
 
   public Semaphore[] ImageAvailableSemaphores = null!;
@@ -101,7 +63,6 @@ public class LarkVulkanData {
 
   public string[]? ValidationLayers;
 
-  // public string[] InstanceExtensions = { }; // Laptop can't use VK_KHR_debug_utils for some reason. Just disable it for now.
   public string[] InstanceExtensions = { ExtDebugUtils.ExtensionName };
   public string[] DeviceExtensions = { KhrSwapchain.ExtensionName };
   public int CurrF;
@@ -114,38 +75,4 @@ public class LarkVulkanData {
     "VK_LAYER_GOOGLE_unique_objects",
     }
   };
-
-  // public Vertex[] Vertices = new Vertex[]
-  //   {
-
-  //     new Vertex { Pos = new Vector3D<float>(-0.5f,-0.5f, 0f), Color = new Vector3D<float>(1.0f, 0.0f, 0.0f), UV = new Vector2D<float>(1.0f, 0.0f) },
-  //     new Vertex { Pos = new Vector3D<float>(0.5f,-0.5f, 0f), Color = new Vector3D<float>(0.0f, 1.0f, 0.0f), UV = new Vector2D<float>(0.0f, 0.0f) },
-  //     new Vertex { Pos = new Vector3D<float>(0.5f,0.5f, 0f), Color = new Vector3D<float>(0.0f, 0.0f, 1.0f), UV = new Vector2D<float>(0.0f, 1.0f) },
-  //     new Vertex { Pos = new Vector3D<float>(-0.5f,0.5f, 0f), Color = new Vector3D<float>(1.0f, 1.0f, 1.0f), UV = new Vector2D<float>(1.0f, 1.0f) },
-
-  //     new Vertex { Pos = new Vector3D<float>(-0.5f,-0.5f, -0.5f), Color = new Vector3D<float>(1.0f, 0.0f, 0.0f), UV = new Vector2D<float>(1.0f, 0.0f) },
-  //     new Vertex { Pos = new Vector3D<float>(0.5f,-0.5f, -0.5f), Color = new Vector3D<float>(0.0f, 1.0f, 0.0f), UV = new Vector2D<float>(0.0f, 0.0f) },
-  //     new Vertex { Pos = new Vector3D<float>(0.5f,0.5f, -0.5f), Color = new Vector3D<float>(0.0f, 0.0f, 1.0f), UV = new Vector2D<float>(0.0f, 1.0f) },
-  //     new Vertex { Pos = new Vector3D<float>(-0.5f,0.5f, -0.5f), Color = new Vector3D<float>(1.0f, 1.0f, 1.0f), UV = new Vector2D<float>(1.0f, 1.0f) },
-  //   };
-
-  // public ushort[] Indices = new ushort[]
-  // {
-  //       0, 1, 2, 2, 3, 0,
-  //       4, 5, 6, 6, 7, 4
-  // };
-
-  // public Memory<Vertex> Vertices = new(new Vertex[]{
-  //   new(new(-0.5f, -0.5f, 0.0f), new(0.0f, 0.0f), new(1.0f, 0.0f, 0.0f)),
-
-  //   new(new(0.5f, -0.5f, 0.0f), new(1.0f, 0.0f), new(0.0f, 1.0f, 0.0f)),
-  //   new(new(0.5f, 0.5f, 0.0f), new(1.0f, 1.0f), new(0.0f, 0.0f, 1.0f)),
-  //   new(new(-0.5f, 0.5f, 0.0f), new(0.0f, 1.0f), new(1.0f, 1.0f, 1.0f)),
-  //   new(new(-0.5f, -0.5f, -0.5f), new(0.0f, 0.0f), new(1.0f, 0.0f, 0.0f)),
-  //   new(new(0.5f, -0.5f, -0.5f), new(1.0f, 0.0f), new(0.0f, 1.0f, 0.0f)),
-  //   new(new(0.5f, 0.5f, -0.5f), new(1.0f, 1.0f), new(0.0f, 0.0f, 1.0f)),
-  //   new(new(-0.5f, 0.5f, -0.5f), new(0.0f, 1.0f), new(1.0f, 1.0f, 1.0f))
-  // });
-
-  // public Memory<ushort> Indices = new(new ushort[] { 0, 1, 2, 2, 3, 0, 4, 5, 6, 6, 7, 4 });
 }

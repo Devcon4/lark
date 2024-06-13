@@ -3,7 +3,7 @@ using Silk.NET.Vulkan;
 
 namespace Lark.Engine.pipeline;
 
-public class CommandUtils(LarkVulkanData data, ILogger<CommandUtils> logger) {
+public class CommandUtils(LarkVulkanData data) {
 
   public unsafe CommandBuffer BeginSingleTimeCommands() {
     var allocInfo = new CommandBufferAllocateInfo {

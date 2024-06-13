@@ -3,7 +3,7 @@ using Lark.Engine.ecs;
 using Microsoft.Extensions.Logging;
 
 namespace Lark.Engine.std.systems {
-  public class CurrentKeySystem(ActionManager am, ILogger<CurrentKeySystem> logger) : LarkSystem, ILarkSystemInit {
+  public class CurrentKeySystem(ActionManager am) : LarkSystem, ILarkSystemInit {
     public override Type[] RequiredComponents => [typeof(CurrentKeysInputComponent)];
 
     public Task Init() {

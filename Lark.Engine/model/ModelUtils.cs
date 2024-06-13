@@ -12,12 +12,12 @@ using Lark.Engine.std;
 
 namespace Lark.Engine.Model;
 
-public class ModelUtils(LarkVulkanData data, ImageUtils imageUtils, BufferUtils bufferUtils, ILogger<ModelUtils> logger, TimeManager tm) {
+public class ModelUtils(LarkVulkanData data, ImageUtils imageUtils, BufferUtils bufferUtils, ILogger<ModelUtils> logger, PBRPipeline pipeline) {
 
 
   public LarkModel LoadFile(string modelName) {
     logger.LogDebug("{modelName}:: Begin loading...", modelName);
-    var fullPath = Path.Join(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), $"./resources/models/{modelName}");
+    var fullPath = Path.Join(Path.GetDirectoryName(AppContext.BaseDirectory), $"./resources/models/{modelName}");
 
     if (!File.Exists(fullPath)) {
       throw new FileNotFoundException($"Model {modelName} does not exist at {fullPath}");
@@ -53,7 +53,7 @@ public class ModelUtils(LarkVulkanData data, ImageUtils imageUtils, BufferUtils 
   }
 
   public unsafe void CreateMeshBuffers(LarkModel model) {
-    var vertexBufferSize = (ulong)(Marshal.SizeOf<Vertex>() * model.meshVertices.Count);
+    var vertexBufferSize = (ulong)(Marshal.SizeOf<LarkVertex>() * model.meshVertices.Count);
     var verticiesStagingBuffer = default(Buffer);
     var verticiesStagingBufferMemory = default(DeviceMemory);
 
@@ -71,7 +71,7 @@ public class ModelUtils(LarkVulkanData data, ImageUtils imageUtils, BufferUtils 
 
     void* verticiesPtr;
     data.vk.MapMemory(data.Device, verticiesStagingBufferMemory, 0, vertexBufferSize, 0, &verticiesPtr);
-    verticesSpan.CopyTo(new Span<Vertex>(verticiesPtr, model.meshVertices.Count));
+    verticesSpan.CopyTo(new Span<LarkVertex>(verticiesPtr, model.meshVertices.Count));
     data.vk.UnmapMemory(data.Device, verticiesStagingBufferMemory);
 
     bufferUtils.CreateBuffer(
@@ -169,101 +169,33 @@ public class ModelUtils(LarkVulkanData data, ImageUtils imageUtils, BufferUtils 
   //   logger.LogInformation("Created descriptor set layout.");
   // }
 
-  public unsafe void Update(LarkModel model, int index) {
-    for (var i = 0; i < model.Nodes.Length; i++) {
-      UpdateNode(model.Nodes.Span[i], model.Transform, index);
-    }
-  }
+  // public unsafe void Update(LarkModel model, int index) {
+  //   for (var i = 0; i < model.Nodes.Length; i++) {
+  //     UpdateNode(model.Nodes.Span[i], model.Transform, index);
+  //   }
+  // }
 
-  private unsafe void UpdateNode(LarkNode node, LarkTransform transform, int index) {
-    var absoluteTransform = node.Transform * transform;
-    foreach (var child in node.Children) {
-      UpdateNode(child, node.Transform, index);
-    }
+  // private unsafe void UpdateNode(LarkNode node, LarkTransform transform, int index) {
+  //   var absoluteTransform = node.Transform * transform;
+  //   foreach (var child in node.Children) {
+  //     UpdateNode(child, node.Transform, index);
+  //   }
 
-    var absoluteMatrix = absoluteTransform.ToMatrix().ToSystem();
+  //   var absoluteMatrix = absoluteTransform.ToMatrix().ToSystem();
 
-    // Setup the push constants.
-    data.vk.CmdPushConstants(
-      data.CommandBuffers[index],
-      data.PipelineLayout,
-      ShaderStageFlags.VertexBit,
-      0,
-      (uint)Marshal.SizeOf<Matrix4x4>(),
-      &absoluteMatrix
-    );
+  //   // Setup the push constants.
+  //   data.vk.CmdPushConstants(
+  //     data.CommandBuffers[index],
+  //     renderer.PipelineLayout,
+  //     ShaderStageFlags.VertexBit,
+  //     0,
+  //     (uint)Marshal.SizeOf<Matrix4x4>(),
+  //     &absoluteMatrix
+  //   );
 
-  }
+  // }
 
-  private unsafe void DrawNode(LarkNode node, LarkTransform parentTransform, LarkModel model, uint index) {
 
-    var absoluteTransform = node.Transform * parentTransform;
-
-    foreach (var child in node.Children) {
-      DrawNode(child, absoluteTransform, model, index);
-    }
-
-    // PushConsts cant be generic types so we use a system matrix.
-    var absoluteMatrix = absoluteTransform.ToMatrix().ToSystem();
-
-    // Setup the push constants.
-    data.vk.CmdPushConstants(
-      data.CommandBuffers[index],
-      data.PipelineLayout,
-      ShaderStageFlags.VertexBit,
-      0,
-      (uint)Marshal.SizeOf<Matrix4x4>(),
-      &absoluteMatrix
-    );
-
-    if (node.Primitives == null || node.Primitives.Length == 0) return;
-
-    // TODO: pass the matrix in as a push constant.
-    foreach (var primitive in node.Primitives) {
-      // if (primitive.IndexCount == 0) continue;
-      var texIndex = model.Materials.Span[primitive.MaterialIndex].BaseColorTextureIndex ?? 0;
-      var texture = model.Textures.Span[texIndex];
-      data.vk.CmdBindDescriptorSets(
-        data.CommandBuffers[index],
-        PipelineBindPoint.Graphics,
-        data.PipelineLayout,
-        1,
-        1,
-        model.Images.Span[texture.TextureIndex].DescriptorSets[index],
-        0,
-        null
-      );
-
-      data.vk.CmdDrawIndexed(data.CommandBuffers[index], (uint)primitive.IndexCount, 1, (uint)primitive.FirstIndex, 0, 0);
-    }
-  }
-
-  public unsafe void Draw(LarkTransform transform, LarkModel model, uint index) {
-    logger.LogInformation("{frame} :: Drawing model {model} :: {position}", tm.TotalFrames, model.ModelId, transform.Translation);
-    var offsets = new ulong[] { 0 };
-
-    // Bind the descriptor set for the matrix.
-    data.vk.CmdBindDescriptorSets(
-      data.CommandBuffers[index],
-      PipelineBindPoint.Graphics,
-      data.PipelineLayout,
-      0,
-      1,
-      model.MatrixDescriptorSet.Span[(int)index],
-      0,
-      null
-    );
-
-    fixed (Buffer* verticesPtr = &model.Vertices.Buffer) {
-      data.vk.CmdBindVertexBuffers(data.CommandBuffers[index], 0, 1, verticesPtr, offsets);
-      data.vk.CmdBindIndexBuffer(data.CommandBuffers[index], model.Indices.Buffer, 0, IndexType.Uint16);
-
-      for (var i = 0; i < model.Nodes.Length; i++) {
-        DrawNode(model.Nodes.Span[i], model.Transform * transform, model, index);
-      }
-    }
-
-  }
 
   // Create the descriptor pool for the model.
   public unsafe void CreateDescriptorPool(LarkModel model) {
@@ -296,9 +228,10 @@ public class ModelUtils(LarkVulkanData data, ImageUtils imageUtils, BufferUtils 
 
   // Create the descriptor set layout for the model. Makes a binding for the uniform buffer and each image.
 
+  // TODO: ModelUtils needs to know what DescriptorSetLayout to use. If we ref PBRPipeline here, we create a circular reference. Refactor this to be more elegant.
   public unsafe void CreateDescriptorSets(LarkModel model) {
 
-    var matrixLayouts = Enumerable.Repeat(data.Layouts.matricies, LarkVulkanData.MaxFramesInFlight).ToArray().AsMemory();
+    var matrixLayouts = Enumerable.Repeat(pipeline.Data.DescriptorSetLayouts[PBRPipeline.Layouts.Matricies], LarkVulkanData.MaxFramesInFlight).ToArray().AsMemory();
     var handler = matrixLayouts.Pin();
 
     // for each MaxFramesInFlight, create the ubo descriptor set.
@@ -335,7 +268,7 @@ public class ModelUtils(LarkVulkanData data, ImageUtils imageUtils, BufferUtils 
 
     // for each MaxFramesInFlight, create the ubo descriptor set.
     for (var j = 0; j < model.Images.Length; j++) {
-      var textureLayouts = Enumerable.Repeat(data.Layouts.textures, LarkVulkanData.MaxFramesInFlight).ToArray().AsMemory();
+      var textureLayouts = Enumerable.Repeat(pipeline.Data.DescriptorSetLayouts[PBRPipeline.Layouts.Textures], LarkVulkanData.MaxFramesInFlight).ToArray().AsMemory();
       var texturesHandler = textureLayouts.Pin();
 
       var textureAllocInfo = new DescriptorSetAllocateInfo {
@@ -503,7 +436,7 @@ public class ModelUtils(LarkVulkanData data, ImageUtils imageUtils, BufferUtils 
 
       // Build the vertices.
       for (var i = 0; i < posData.Length; i++) {
-        model.meshVertices.Add(new Vertex {
+        model.meshVertices.Add(new LarkVertex {
           Pos = new Vector3D<float>(posData[i].X, posData[i].Y, posData[i].Z),
           Normal = new Vector3D<float>(normData[i].X, normData[i].Y, normData[i].Z),
           UV = new Vector2D<float>(texData[i].X, texData[i].Y),

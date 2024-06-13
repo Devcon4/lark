@@ -162,11 +162,10 @@ public class LarkWindow(ILogger<LarkWindow> logger, IOptions<GameSettings> optio
   }
 
   internal unsafe void SetCursorPosition(Vector2? position) {
-    if (position is null) {
-      // If null set to center of window
-      position = new Vector2(FramebufferSize.X / 2, FramebufferSize.Y / 2);
-    }
-    _glfw.SetCursorPos(windowHandle, (float)position?.X, (float)position?.Y);
+    // If null set to center of window
+    position ??= new Vector2(FramebufferSize.X / 2, FramebufferSize.Y / 2);
+
+    _glfw.SetCursorPos(windowHandle, position.Value.X, position.Value.Y);
   }
 
 }
