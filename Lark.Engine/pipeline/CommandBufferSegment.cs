@@ -1,4 +1,4 @@
-using Lark.Engine.Model;
+using Lark.Engine.model;
 using Lark.Engine.Ultralight;
 using Microsoft.Extensions.Logging;
 using Silk.NET.Maths;
@@ -7,7 +7,7 @@ using Buffer = Silk.NET.Vulkan.Buffer;
 
 namespace Lark.Engine.pipeline;
 
-public class CommandBufferSegment(LarkVulkanData data, IEnumerable<ILarkPipeline> pipelines) {
+public class CommandBufferSegment(LarkVulkanData data, IEnumerable<ILarkPipeline> pipelines, ILogger<CommandBufferSegment> logger) {
 
   public unsafe void CreateCommandBuffers() {
     data.CommandBuffers = new CommandBuffer[LarkVulkanData.MaxFramesInFlight];
@@ -44,7 +44,8 @@ public class CommandBufferSegment(LarkVulkanData data, IEnumerable<ILarkPipeline
 
     var scissor = new Rect2D { Offset = default, Extent = data.SwapchainExtent };
 
-    foreach (var pipeline in pipelines) {
+    foreach (var pipeline in pipelines.OrderByDescending(p => p.Priority)) {
+      logger.LogDebug("Drawing pipeline {pipeline}", pipeline.GetType().Name);
 
       var renderPassBeginInfo = new RenderPassBeginInfo {
         SType = StructureType.RenderPassBeginInfo,

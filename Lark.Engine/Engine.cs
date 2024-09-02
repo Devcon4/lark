@@ -19,7 +19,8 @@ public class EcsModule(SystemManager systemManager) : ILarkModule {
   }
 
   public async Task Run() {
-    await systemManager.Run();
+    systemManager.Run();
+    await Task.CompletedTask;
   }
 }
 

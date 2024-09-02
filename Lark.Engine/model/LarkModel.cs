@@ -2,7 +2,7 @@ using Lark.Engine.pipeline;
 using Silk.NET.Vulkan;
 using Buffer = Silk.NET.Vulkan.Buffer;
 
-namespace Lark.Engine.Model;
+namespace Lark.Engine.model;
 
 public struct LarkPrimitive {
   public int FirstIndex;

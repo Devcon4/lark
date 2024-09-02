@@ -33,15 +33,16 @@ layout(location=4)out vec3 outLightVec;
 
 void main()
 {
-  outNormal=inNormal;
   outColor=inColor;
   outUV=inUV;
-  gl_Position=ubo.proj*ubo.view*primitive.model*vec4(inPos.xyz,1.);
+  mat4 pvm = ubo.proj * ubo.view * primitive.model;
+  gl_Position=pvm*vec4(inPos.xyz,1.);
   // gl_Position=ubo.proj*ubo.view*ubo.model*vec4(inPos.xyz,1.);//*primitive.model
   // gl_Position=uboScene.projection*uboScene.view*vec4(inPos.xyz,1.);//*primitive.model
   
-  vec4 pos=ubo.view*vec4(inPos,1.);
-  outNormal=mat3(ubo.view)*inNormal;
+  outNormal=(ubo.proj * ubo.view *vec4(inNormal,0)).xyz;
+
+  vec4 pos=pvm*vec4(inPos,1.);
   vec3 lPos=mat3(ubo.view)*ubo.lightPos.xyz;
   outLightVec=ubo.lightPos.xyz-pos.xyz;
   outViewVec=ubo.viewPos.xyz-pos.xyz;

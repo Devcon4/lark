@@ -1,6 +1,6 @@
 using System.Numerics;
 using System.Runtime.InteropServices;
-using Lark.Engine.Model;
+using Lark.Engine.model;
 using Microsoft.Extensions.Logging;
 using Silk.NET.Core.Native;
 using Silk.NET.Maths;
@@ -9,49 +9,82 @@ using Buffer = Silk.NET.Vulkan.Buffer;
 
 namespace Lark.Engine.pipeline;
 
-public class PBRPipeline(ILogger<PBRPipeline> logger, LarkVulkanData shareData, ImageUtils imageUtils, ShaderBuilder shaderBuilder) : LarkPipeline {
+public class GeometryPassData() {
+  public Memory<LarkImage> Images = new(new LarkImage[LarkVulkanData.MaxFramesInFlight]);
+  public Memory<LarkImage> Normals = new(new LarkImage[LarkVulkanData.MaxFramesInFlight]);
+  public Memory<LarkImage> Depth = new(new LarkImage[LarkVulkanData.MaxFramesInFlight]);
+}
+
+public class GeometryPipeline(ILogger<GeometryPipeline> logger, GeometryPassData geometryPass, LarkVulkanData shareData, ImageUtils imageUtils, ShaderBuilder shaderBuilder) : LarkPipeline(shareData) {
+  public Dictionary<string, DescriptorSetLayout> DescriptorSetLayouts = [];
+
   public override void Start() {
-    logger.LogInformation("Starting PBR pipeline...");
+    logger.LogInformation("Starting Geometry pipeline...");
+
+    // Geo is kinda special, descriptorSets are tracked per model. Because of this we don't use PipelineSets.
+    // We could look at refactoring this to use PipelineSets in the future.
+
+    CreateGBufferImages();
     CreateDescriptorSetLayouts();
     CreateRenderPass();
-    CreateDepthImage();
     CreateClearValues();
     CreateFramebuffers();
     CreateGraphicsPipeline();
   }
 
-  public struct Layouts() {
-    public static string Matricies = "Matrices";
-    public static string Textures = "Textures";
+  public readonly struct Layouts() {
+    public static readonly string Matricies = "Matrices";
+    public static readonly string Textures = "Textures";
   }
 
   public override unsafe void Draw(uint index) {
+    // Transition the images to the correct layout
+    TransitionGBufferImages((int)index, ImageLayout.ColorAttachmentOptimal);
+    imageUtils.TransitionImageLayout(ref geometryPass.Depth.Span[(int)index], ImageLayout.DepthStencilAttachmentOptimal, ImageAspectFlags.DepthBit);
+
     foreach (var (key, instance) in shareData.instances) {
       var model = shareData.models[instance.ModelId];
       DrawMesh(instance.Transform, model, index);
     }
+
+    TransitionGBufferImages((int)index, ImageLayout.ShaderReadOnlyOptimal);
+    imageUtils.TransitionImageLayout(ref geometryPass.Depth.Span[(int)index], ImageLayout.ShaderReadOnlyOptimal, ImageAspectFlags.DepthBit);
+  }
+
+  private void TransitionGBufferImages(int index, ImageLayout newLayout) {
+    imageUtils.TransitionImageLayout(ref geometryPass.Images.Span[index], newLayout);
+    imageUtils.TransitionImageLayout(ref geometryPass.Normals.Span[index], newLayout);
   }
 
   public unsafe override void Cleanup() {
-    foreach (var layout in Data.DescriptorSetLayouts.Values) {
+    foreach (var layout in DescriptorSetLayouts.Values) {
       shareData.vk.DestroyDescriptorSetLayout(shareData.Device, layout, null);
+    }
+
+    foreach (var image in geometryPass.Images.Span) {
+      image.Dispose(shareData);
+    }
+
+    foreach (var image in geometryPass.Normals.Span) {
+      image.Dispose(shareData);
+    }
+
+    foreach (var image in geometryPass.Depth.Span) {
+      image.Dispose(shareData);
     }
 
     foreach (var framebuffer in Data.Framebuffers) {
       shareData.vk.DestroyFramebuffer(shareData.Device, framebuffer, null);
     }
-    shareData.vk.DestroyDescriptorPool(shareData.Device, Data.DescriptorPool, null);
 
     shareData.vk.DestroyPipeline(shareData.Device, Data.Pipeline, null);
     shareData.vk.DestroyRenderPass(shareData.Device, Data.RenderPass, null);
     shareData.vk.DestroyPipelineLayout(shareData.Device, Data.PipelineLayout, null);
 
-    DepthImage.Dispose(shareData);
 
     base.Cleanup();
   }
 
-  public LarkImage DepthImage;
 
   private unsafe void DrawNode(LarkNode node, LarkTransform parentTransform, LarkModel model, uint index) {
 
@@ -96,9 +129,9 @@ public class PBRPipeline(ILogger<PBRPipeline> logger, LarkVulkanData shareData, 
     }
   }
 
+
   public unsafe void DrawMesh(LarkTransform transform, LarkModel model, uint index) {
     var offsets = new ulong[] { 0 };
-
     // Bind the descriptor set for the matrix.
     shareData.vk.CmdBindDescriptorSets(
       shareData.CommandBuffers[index],
@@ -129,22 +162,66 @@ public class PBRPipeline(ILogger<PBRPipeline> logger, LarkVulkanData shareData, 
       },
       new() {
         DepthStencil = new ClearDepthStencilValue { Depth = 1, Stencil = 0 }
+      },
+      new() {
+        Color = new ClearColorValue { Float32_0 = 0, Float32_1 = 0, Float32_2 = 0, Float32_3 = 0 }
       }
     ];
   }
 
-  public unsafe void CreateDepthImage() {
-    var depthFormat = imageUtils.FindDepthFormat();
+  // public unsafe void CreateDepthImage() {
+  //   var depthFormat = imageUtils.FindDepthFormat();
 
-    imageUtils.CreateImage(shareData.SwapchainExtent.Width, shareData.SwapchainExtent.Height, depthFormat, ImageTiling.Optimal, ImageUsageFlags.DepthStencilAttachmentBit, MemoryPropertyFlags.DeviceLocalBit, ref DepthImage.Image, ref DepthImage.Memory);
-    DepthImage.View = imageUtils.CreateImageView(DepthImage.Image, depthFormat, ImageAspectFlags.DepthBit);
+  //   imageUtils.CreateImage(shareData.SwapchainExtent.Width, shareData.SwapchainExtent.Height, depthFormat, ImageTiling.Optimal, ImageUsageFlags.DepthStencilAttachmentBit, MemoryPropertyFlags.DeviceLocalBit, ref DepthImage.Image, ref DepthImage.Memory);
+  //   DepthImage.View = imageUtils.CreateImageView(DepthImage.Image, depthFormat, ImageAspectFlags.DepthBit);
+  //   // imageUtils.TransitionImageLayout(DepthImage.Image, ImageLayout.Undefined, ImageLayout.DepthStencilAttachmentOptimal);
+  // }
+
+  private unsafe void CreateGBufferImages() {
+    CreateGbufferPart(ref geometryPass.Images);
+    CreateGbufferPart(ref geometryPass.Normals);
+    CreateGbufferPart(ref geometryPass.Depth, ImageAspectFlags.DepthBit, imageUtils.FindDepthFormat(), ImageUsageFlags.InputAttachmentBit | ImageUsageFlags.SampledBit | ImageUsageFlags.DepthStencilAttachmentBit);
+  }
+
+  private unsafe void CreateGbufferPart(ref Memory<LarkImage> images, ImageAspectFlags aspect = ImageAspectFlags.ColorBit, Format format = Format.B8G8R8A8Unorm, ImageUsageFlags usage = ImageUsageFlags.ColorAttachmentBit | ImageUsageFlags.InputAttachmentBit | ImageUsageFlags.SampledBit) {
+    for (int i = 0; i < LarkVulkanData.MaxFramesInFlight; i++) {
+      imageUtils.CreateImage(shareData.SwapchainExtent.Width, shareData.SwapchainExtent.Height, format, ImageTiling.Optimal, usage, MemoryPropertyFlags.DeviceLocalBit, ref images.Span[i].Image, ref images.Span[i].Memory);
+      // create image view and sampler
+      images.Span[i].View = imageUtils.CreateImageView(images.Span[i].Image, format, aspect);
+      CreateGBufferSampler(ref images.Span[i].Sampler);
+      // imageUtils.TransitionImageLayout(images.Span[i].Image, ImageLayout.Undefined, ImageLayout.ColorAttachmentOptimal);
+    }
+
+  }
+
+  private unsafe void CreateGBufferSampler(ref Sampler GBufferSampler) {
+    var samplerInfo = new SamplerCreateInfo {
+      SType = StructureType.SamplerCreateInfo,
+      MagFilter = Filter.Linear,
+      MinFilter = Filter.Linear,
+      AddressModeU = SamplerAddressMode.ClampToEdge,
+      AddressModeV = SamplerAddressMode.ClampToEdge,
+      AddressModeW = SamplerAddressMode.ClampToEdge,
+      AnisotropyEnable = Vk.False,
+      BorderColor = BorderColor.IntOpaqueBlack,
+      UnnormalizedCoordinates = Vk.False,
+      CompareEnable = Vk.False,
+      CompareOp = CompareOp.Always,
+      MipmapMode = SamplerMipmapMode.Linear
+    };
+
+    if (shareData.vk.CreateSampler(shareData.Device, &samplerInfo, null, out GBufferSampler) != Result.Success) {
+      throw new Exception("failed to create texture sampler!");
+    }
   }
 
   public unsafe void CreateFramebuffers() {
-    Data.Framebuffers = new Framebuffer[shareData.SwapchainImageViews.Length];
+    // This will create a framebuffer with multiple color attachments.
+    // This will be used to store the geometry information of the scene.
+    Data.Framebuffers = new Framebuffer[geometryPass.Images.Length];
 
-    for (int i = 0; i < shareData.SwapchainImageViews.Length; i++) {
-      var attachments = new[] { shareData.SwapchainImageViews[i], DepthImage.View };
+    for (int i = 0; i < geometryPass.Images.Length; i++) {
+      var attachments = new[] { geometryPass.Images.Span[i].View, geometryPass.Depth.Span[i].View, geometryPass.Normals.Span[i].View };
 
       var (attachmentMem, attachmentSize) = RegisterMemory(attachments);
 
@@ -183,7 +260,7 @@ public class PBRPipeline(ILogger<PBRPipeline> logger, LarkVulkanData shareData, 
       throw new Exception("failed to create descriptor set layout!");
     }
 
-    Data.DescriptorSetLayouts.Add(Layouts.Matricies, matricesLayout);
+    DescriptorSetLayouts.Add(Layouts.Matricies, matricesLayout);
 
     var textureLayoutBinding = new DescriptorSetLayoutBinding {
       Binding = 0,
@@ -203,7 +280,7 @@ public class PBRPipeline(ILogger<PBRPipeline> logger, LarkVulkanData shareData, 
       throw new Exception("failed to create descriptor set layout!");
     }
 
-    Data.DescriptorSetLayouts.Add(Layouts.Textures, textureLayout);
+    DescriptorSetLayouts.Add(Layouts.Textures, textureLayout);
 
     logger.LogInformation("Created descriptor set layouts.");
   }
@@ -217,7 +294,18 @@ public class PBRPipeline(ILogger<PBRPipeline> logger, LarkVulkanData shareData, 
       StencilLoadOp = AttachmentLoadOp.DontCare,
       StencilStoreOp = AttachmentStoreOp.DontCare,
       InitialLayout = ImageLayout.Undefined,
-      FinalLayout = ImageLayout.PresentSrcKhr
+      FinalLayout = ImageLayout.ShaderReadOnlyOptimal
+    };
+
+    var normalAttachment = new AttachmentDescription {
+      Format = shareData.SwapchainImageFormat,
+      Samples = SampleCountFlags.Count1Bit,
+      LoadOp = AttachmentLoadOp.Clear,
+      StoreOp = AttachmentStoreOp.Store,
+      StencilLoadOp = AttachmentLoadOp.DontCare,
+      StencilStoreOp = AttachmentStoreOp.DontCare,
+      InitialLayout = ImageLayout.Undefined,
+      FinalLayout = ImageLayout.ShaderReadOnlyOptimal
     };
 
     var depthAttachment = new AttachmentDescription {
@@ -228,13 +316,21 @@ public class PBRPipeline(ILogger<PBRPipeline> logger, LarkVulkanData shareData, 
       StencilLoadOp = AttachmentLoadOp.DontCare,
       StencilStoreOp = AttachmentStoreOp.DontCare,
       InitialLayout = ImageLayout.Undefined,
-      FinalLayout = ImageLayout.DepthStencilAttachmentOptimal
+      FinalLayout = ImageLayout.ShaderReadOnlyOptimal
     };
 
     var colorAttachmentRef = new AttachmentReference {
       Attachment = 0,
       Layout = ImageLayout.ColorAttachmentOptimal
     };
+
+    var normalAttachmentRef = new AttachmentReference {
+      Attachment = 2,
+      Layout = ImageLayout.ColorAttachmentOptimal
+    };
+
+    var colorAttachmentRefs = new[] { colorAttachmentRef, normalAttachmentRef };
+    var (colorAttachmentRefsMem, colorAttachmentRefsSize) = RegisterMemory(colorAttachmentRefs);
 
     var depthAttachmentRef = new AttachmentReference {
       Attachment = 1,
@@ -243,12 +339,12 @@ public class PBRPipeline(ILogger<PBRPipeline> logger, LarkVulkanData shareData, 
 
     var subpass = new SubpassDescription {
       PipelineBindPoint = PipelineBindPoint.Graphics,
-      ColorAttachmentCount = 1,
-      PColorAttachments = &colorAttachmentRef,
+      ColorAttachmentCount = colorAttachmentRefsSize,
+      PColorAttachments = (AttachmentReference*)colorAttachmentRefsMem.Pointer,
       PDepthStencilAttachment = &depthAttachmentRef
     };
 
-    var attachments = new[] { colorAttachment, depthAttachment };
+    var attachments = new[] { colorAttachment, depthAttachment, normalAttachment };
 
     var dependency = new SubpassDependency() {
       SrcSubpass = Vk.SubpassExternal,
@@ -302,7 +398,7 @@ public class PBRPipeline(ILogger<PBRPipeline> logger, LarkVulkanData shareData, 
 
     var bindingDescription = LarkVertex.GetBindingDescription();
     var attributeDescriptions = LarkVertex.GetAttributeDescriptions();
-    var (setLayoutsMem, setLayoutsSize) = RegisterMemory(Data.DescriptorSetLayouts.Values.ToArray());
+    var (setLayoutsMem, setLayoutsSize) = RegisterMemory(DescriptorSetLayouts.Values.ToArray());
 
     fixed (VertexInputAttributeDescription* attributeDescriptionsPtr = attributeDescriptions) {
 
@@ -373,12 +469,23 @@ public class PBRPipeline(ILogger<PBRPipeline> logger, LarkVulkanData shareData, 
         BlendEnable = Vk.False
       };
 
+      var normalBlendAttachment = new PipelineColorBlendAttachmentState {
+        ColorWriteMask = ColorComponentFlags.RBit |
+                           ColorComponentFlags.GBit |
+                           ColorComponentFlags.BBit |
+                           ColorComponentFlags.ABit,
+        BlendEnable = Vk.False
+      };
+
+      var attachments = new[] { colorBlendAttachment, normalBlendAttachment };
+      var (attachmentsMem, attachmentsSize) = RegisterMemory(attachments);
+
       var colorBlending = new PipelineColorBlendStateCreateInfo {
         SType = StructureType.PipelineColorBlendStateCreateInfo,
         LogicOpEnable = Vk.False,
         LogicOp = LogicOp.Copy,
-        AttachmentCount = 1,
-        PAttachments = &colorBlendAttachment
+        AttachmentCount = attachmentsSize,
+        PAttachments = (PipelineColorBlendAttachmentState*)attachmentsMem.Pointer
       };
 
       colorBlending.BlendConstants[0] = 0.0f;
@@ -388,7 +495,7 @@ public class PBRPipeline(ILogger<PBRPipeline> logger, LarkVulkanData shareData, 
 
       var dynamicStates = stackalloc[] {
         DynamicState.Viewport,
-        DynamicState.LineWidth
+        DynamicState.LineWidth,
       };
 
       var dynamicState = new PipelineDynamicStateCreateInfo {
@@ -443,22 +550,5 @@ public class PBRPipeline(ILogger<PBRPipeline> logger, LarkVulkanData shareData, 
     shareData.vk.DestroyShaderModule(shareData.Device, vertShaderModule, null);
 
     logger.LogInformation("Created graphics pipeline.");
-  }
-
-  private unsafe ShaderModule CreateShaderModule(byte[] code) {
-    var (codeMem, codeSize) = RegisterMemory(code);
-
-    var createInfo = new ShaderModuleCreateInfo {
-      SType = StructureType.ShaderModuleCreateInfo,
-      CodeSize = codeSize,
-      PCode = (uint*)codeMem.Pointer
-    };
-
-    var shaderModule = new ShaderModule();
-    if (shareData.vk.CreateShaderModule(shareData.Device, &createInfo, null, &shaderModule) != Result.Success) {
-      throw new Exception("failed to create shader module!");
-    }
-
-    return shaderModule;
   }
 }

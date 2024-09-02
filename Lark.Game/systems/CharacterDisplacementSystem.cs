@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Lark.Game.systems;
 
-public class CharacterDisplacementSystem(EntityManager em, JoltManager jm, TimeManager tm, ILogger<CharacterDisplacementSystem> logger) : LarkSystem, ILarkSystemBeforeUpdate, ILarkSystemAfterUpdate {
+public class CharacterDisplacementSystem(EntityManager em, JoltManager jm, TimeManager tm) : LarkSystem, ILarkSystemBeforeUpdate, ILarkSystemAfterUpdate {
   public override Type[] RequiredComponents => [typeof(CharacterRotationComponent), typeof(CharacterDisplacementComponent), typeof(CharacterComponent)];
 
   public void BeforeUpdate() {
@@ -78,8 +78,6 @@ public class CharacterDisplacementSystem(EntityManager em, JoltManager jm, TimeM
         c.Position = new Vector3(0, -3, 0);
       }
 
-      logger.LogInformation("{frame} :: JoltCharacterDisplacementSystem :: {key} :: {displacementVector} :: {position}", tm.TotalFrames, key, displacementVector, transform.Position);
-
       // A player should have a child body which is the actual physics body. This is so we can do raycasts and other physics operations on the player.
       var (bodyKey, bodyComponents) = em.GetEntity(character.BodyId);
       var bodyInstance = bodyComponents.Get<JoltBodyInstanceComponent>();
@@ -95,7 +93,6 @@ public class CharacterDisplacementSystem(EntityManager em, JoltManager jm, TimeM
 
       // var cameraBodyInstance = components.Get<JoltBodyInstanceComponent>();
 
-      logger.LogInformation("CameraBodyInstance :: {key} :: {systemId} :: {bodyId} :: {time}", key, systemId, bodyKey, tm.DeltaTime.TotalSeconds);
       // bi.MoveKinematic(cameraBodyInstance.BodyId, bodyPos + new Vector3(-2, 0, 0), c.Rotation * LarkUtils.CreateFromYawPitchRoll(-180, 0, 0), (float)tm.DeltaTime.TotalSeconds);
       // var cameraBody = jm.GetBodyRead(cameraBodyInstance.SystemId, cameraBodyInstance.BodyId);
       // var bodyBody = jm.GetBodyRead(bodyInstance.SystemId, bodyInstance.BodyId);

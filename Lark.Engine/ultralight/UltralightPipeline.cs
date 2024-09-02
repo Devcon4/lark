@@ -4,42 +4,74 @@ using Microsoft.Extensions.Logging;
 using Silk.NET.Core.Native;
 using Silk.NET.Vulkan;
 using ImpromptuNinjas.UltralightSharp;
-using Lark.Engine.Model;
 
 namespace Lark.Engine.Ultralight;
 
 
-public class UltralightPipeline(UltralightController controller, BufferUtils bufferUtils, ImageUtils imageUtils, ShaderBuilder shaderBuilder, LarkVulkanData shareData, ILogger<UltralightPipeline> logger) : LarkPipeline {
+public class UIPassData() {
+  public Memory<LarkImage> FinalImages = new(new LarkImage[LarkVulkanData.MaxFramesInFlight]);
+  public Memory<LarkImage> BitmapImages = new(new LarkImage[LarkVulkanData.MaxFramesInFlight]);
+}
 
-  private Memory<LarkImage> UIImages = new(new LarkImage[LarkVulkanData.MaxFramesInFlight]);
+public class UltralightPipeline(LarkVulkanData shareData, UIPassData uiPass, UltralightController controller, BufferUtils bufferUtils, ImageUtils imageUtils, ShaderBuilder shaderBuilder, ILogger<UltralightPipeline> logger) : LarkPipeline(shareData) {
+
+  public readonly struct Layouts {
+    public static readonly string Textures = "Textures";
+  }
 
   public override void Start() {
     logger.LogInformation("Starting Ultralight pipeline...");
-    CreateDescriptorSetLayouts();
     CreateDescriptorPool();
+    DeclarePipelineSets();
+    CreateSetLayouts();
+
     CreateRenderPass();
-    CreateFramebuffers();
     CreateUIImages();
-    CreateDescriptorSets();
+    CreateFramebuffers();
+    CreateSet(Layouts.Textures);
+
     CreateGraphicsPipeline();
+    CreateClearValues();
   }
 
   public override void Update(uint index) {
     CopyBitmapToImage((int)index);
   }
 
+  private void DeclarePipelineSets() {
+    RegisterSet(Layouts.Textures, 0, [
+      new LarkLayoutBindingInfo(DescriptorType.CombinedImageSampler, ShaderStageFlags.FragmentBit, 0)
+    ]);
+  }
+
+  private unsafe void UppdateTextureSets(uint index) {
+    var textureUpdateInfo = new DescriptorImageInfo {
+      Sampler = uiPass.BitmapImages.Span[(int)index].Sampler,
+      ImageView = uiPass.BitmapImages.Span[(int)index].View,
+      ImageLayout = ImageLayout.ShaderReadOnlyOptimal
+    };
+
+    UpdateSet(Layouts.Textures, index, new WriteDescriptorSet {
+      SType = StructureType.WriteDescriptorSet,
+      DstBinding = 0,
+      DescriptorCount = 1,
+      DescriptorType = DescriptorType.CombinedImageSampler,
+      PImageInfo = &textureUpdateInfo
+    });
+  }
+
   public unsafe void CreateFramebuffers() {
-    Data.Framebuffers = new Framebuffer[shareData.SwapchainImageViews.Length];
+    Data.Framebuffers = new Framebuffer[LarkVulkanData.MaxFramesInFlight];
 
-    for (int i = 0; i < shareData.SwapchainImageViews.Length; i++) {
-      var attachments = new[] { shareData.SwapchainImageViews[i] };
+    for (int i = 0; i < LarkVulkanData.MaxFramesInFlight; i++) {
+      var attachments = new[] { uiPass.FinalImages.Span[i].View, uiPass.BitmapImages.Span[i].View };
 
-      var (attachmentMem, _) = RegisterMemory(attachments);
+      var (attachmentMem, attachmentSize) = RegisterMemory(attachments);
 
       var framebufferInfo = new FramebufferCreateInfo {
         SType = StructureType.FramebufferCreateInfo,
         RenderPass = Data.RenderPass,
-        AttachmentCount = 1,
+        AttachmentCount = attachmentSize,
         PAttachments = (ImageView*)attachmentMem.Pointer,
         Width = shareData.SwapchainExtent.Width,
         Height = shareData.SwapchainExtent.Height,
@@ -50,30 +82,37 @@ public class UltralightPipeline(UltralightController controller, BufferUtils buf
         throw new Exception("failed to create framebuffer!");
       }
     }
-  }
 
+  }
   public unsafe override void Draw(uint index) {
-    shareData.vk.CmdBindDescriptorSets(
-      shareData.CommandBuffers[index],
-      PipelineBindPoint.Graphics,
-      Data.PipelineLayout,
-      0,
-      1,
-      UIImages.Span[(int)index].DescriptorSets[0],
-      0,
-      null
-    );
+
+    imageUtils.TransitionImageLayout(ref uiPass.BitmapImages.Span[(int)index], ImageLayout.ShaderReadOnlyOptimal);
+
+    UppdateTextureSets(index);
+    BindSet(Layouts.Textures, index);
+
     shareData.vk.CmdDraw(shareData.CommandBuffers[index], 6, 1, 0, 0);
 
   }
 
   public unsafe override void Cleanup() {
-    foreach (var image in UIImages.Span) {
-      image.Dispose(shareData);
+
+    foreach (var image in uiPass.FinalImages.Span) {
+      shareData.vk.DestroySampler(shareData.Device, image.Sampler, null);
+      shareData.vk.DestroyImageView(shareData.Device, image.View, null);
+      shareData.vk.DestroyImage(shareData.Device, image.Image, null);
+      shareData.vk.FreeMemory(shareData.Device, image.Memory, null);
     }
 
-    foreach (var layout in Data.DescriptorSetLayouts.Values) {
-      shareData.vk.DestroyDescriptorSetLayout(shareData.Device, layout, null);
+    foreach (var image in uiPass.BitmapImages.Span) {
+      shareData.vk.DestroySampler(shareData.Device, image.Sampler, null);
+      shareData.vk.DestroyImageView(shareData.Device, image.View, null);
+      shareData.vk.DestroyImage(shareData.Device, image.Image, null);
+      shareData.vk.FreeMemory(shareData.Device, image.Memory, null);
+    }
+
+    foreach (var set in Data.PipelineSets.Values) {
+      shareData.vk.DestroyDescriptorSetLayout(shareData.Device, set.Layout, null);
     }
 
     foreach (var framebuffer in Data.Framebuffers) {
@@ -129,60 +168,35 @@ public class UltralightPipeline(UltralightController controller, BufferUtils buf
     // }
 
     // transition the UIImage so we can copy
-    imageUtils.TransitionImageLayout(UIImages.Span[index].Image, ImageLayout.Undefined, ImageLayout.TransferDstOptimal);
-    imageUtils.CopyBufferToImage(stagingBuffer.Buffer, UIImages.Span[index].Image, width, height);
-    imageUtils.TransitionImageLayout(UIImages.Span[index].Image, ImageLayout.TransferDstOptimal, ImageLayout.ShaderReadOnlyOptimal);
+    imageUtils.TransitionImageLayout(uiPass.BitmapImages.Span[index].Image, ImageLayout.Undefined, ImageLayout.TransferDstOptimal);
+    imageUtils.CopyBufferToImage(stagingBuffer.Buffer, uiPass.BitmapImages.Span[index].Image, width, height);
+    imageUtils.TransitionImageLayout(uiPass.BitmapImages.Span[index].Image, ImageLayout.TransferDstOptimal, ImageLayout.ShaderReadOnlyOptimal);
 
     stagingBuffer.Dispose(shareData);
 
     bitmap->UnlockPixels();
   }
 
-  private unsafe void CreateUIImages() {
-    for (int i = 0; i < LarkVulkanData.MaxFramesInFlight; i++) {
-      imageUtils.CreateImage(shareData.SwapchainExtent.Width, shareData.SwapchainExtent.Height, Format.B8G8R8A8Unorm, ImageTiling.Optimal, ImageUsageFlags.TransferDstBit | ImageUsageFlags.SampledBit, MemoryPropertyFlags.DeviceLocalBit, ref UIImages.Span[i].Image, ref UIImages.Span[i].Memory);
-      // create image view and sampler
-      UIImages.Span[i].View = imageUtils.CreateImageView(UIImages.Span[i].Image, Format.B8G8R8A8Unorm, ImageAspectFlags.ColorBit);
-      CreateUISampler(ref UIImages.Span[i].Sampler);
-    }
+  public void CreateClearValues() {
+    Data.clearValues = [
+      new() {
+        Color = new ClearColorValue { Float32_0 = 0, Float32_1 = 0, Float32_2 = 0, Float32_3 = 0 }
+      },
+      new() {
+        DepthStencil = new ClearDepthStencilValue { Depth = 1, Stencil = 0 }
+      }
+    ];
   }
 
-  private unsafe void CreateDescriptorSets() {
-    var layouts = Enumerable.Repeat(Data.DescriptorSetLayouts["Textures"], LarkVulkanData.MaxFramesInFlight).ToArray();
-    var (layoutsMem, layoutsSize) = RegisterMemory(layouts);
-    for (int j = 0; j < UIImages.Length; j++) {
+  private unsafe void CreateUIImages() {
+    for (int i = 0; i < LarkVulkanData.MaxFramesInFlight; i++) {
+      imageUtils.CreateImage(shareData.SwapchainExtent.Width, shareData.SwapchainExtent.Height, Format.B8G8R8A8Unorm, ImageTiling.Optimal, ImageUsageFlags.TransferDstBit | ImageUsageFlags.SampledBit | ImageUsageFlags.InputAttachmentBit | ImageUsageFlags.ColorAttachmentBit, MemoryPropertyFlags.DeviceLocalBit, ref uiPass.FinalImages.Span[i].Image, ref uiPass.FinalImages.Span[i].Memory);
+      uiPass.FinalImages.Span[i].View = imageUtils.CreateImageView(uiPass.FinalImages.Span[i].Image, Format.B8G8R8A8Unorm, ImageAspectFlags.ColorBit);
+      CreateUISampler(ref uiPass.FinalImages.Span[i].Sampler);
 
-      var allocInfo = new DescriptorSetAllocateInfo {
-        SType = StructureType.DescriptorSetAllocateInfo,
-        DescriptorPool = Data.DescriptorPool,
-        DescriptorSetCount = 1,
-        PSetLayouts = (DescriptorSetLayout*)layoutsMem.Pointer
-      };
-
-      var descriptorSets = new DescriptorSet[1];
-      if (shareData.vk.AllocateDescriptorSets(shareData.Device, &allocInfo, descriptorSets) != Result.Success) {
-        throw new Exception("failed to allocate descriptor sets!");
-      }
-
-      var imageInfo = new DescriptorImageInfo {
-        Sampler = UIImages.Span[j].Sampler,
-        ImageView = UIImages.Span[j].View,
-        ImageLayout = ImageLayout.ShaderReadOnlyOptimal
-      };
-
-      var descriptorWrite = new WriteDescriptorSet {
-        SType = StructureType.WriteDescriptorSet,
-        DstSet = descriptorSets[0],
-        DstBinding = 0,
-        DstArrayElement = 0,
-        DescriptorCount = 1,
-        DescriptorType = DescriptorType.CombinedImageSampler,
-        PImageInfo = &imageInfo
-      };
-
-      shareData.vk.UpdateDescriptorSets(shareData.Device, 1, &descriptorWrite, 0, null);
-
-      UIImages.Span[j].DescriptorSets = descriptorSets;
+      imageUtils.CreateImage(shareData.SwapchainExtent.Width, shareData.SwapchainExtent.Height, Format.B8G8R8A8Unorm, ImageTiling.Optimal, ImageUsageFlags.TransferDstBit | ImageUsageFlags.SampledBit | ImageUsageFlags.InputAttachmentBit | ImageUsageFlags.ColorAttachmentBit, MemoryPropertyFlags.DeviceLocalBit, ref uiPass.BitmapImages.Span[i].Image, ref uiPass.BitmapImages.Span[i].Memory);
+      uiPass.BitmapImages.Span[i].View = imageUtils.CreateImageView(uiPass.BitmapImages.Span[i].Image, Format.B8G8R8A8Unorm, ImageAspectFlags.ColorBit);
+      imageUtils.CreateSampler(ref uiPass.BitmapImages.Span[i].Sampler);
     }
   }
 
@@ -205,28 +219,6 @@ public class UltralightPipeline(UltralightController controller, BufferUtils buf
     if (shareData.vk.CreateSampler(shareData.Device, &samplerInfo, null, out UISampler) != Result.Success) {
       throw new Exception("failed to create texture sampler!");
     }
-  }
-
-  private unsafe void CreateDescriptorSetLayouts() {
-    var textureLayoutBinding = new DescriptorSetLayoutBinding {
-      Binding = 0,
-      DescriptorType = DescriptorType.CombinedImageSampler,
-      DescriptorCount = 1,
-      StageFlags = ShaderStageFlags.FragmentBit,
-      PImmutableSamplers = null
-    };
-
-    var textureLayoutInfo = new DescriptorSetLayoutCreateInfo {
-      SType = StructureType.DescriptorSetLayoutCreateInfo,
-      BindingCount = 1,
-      PBindings = &textureLayoutBinding
-    };
-
-    if (shareData.vk.CreateDescriptorSetLayout(shareData.Device, &textureLayoutInfo, null, out DescriptorSetLayout textureLayout) != Result.Success) {
-      throw new Exception("failed to create descriptor set layout!");
-    }
-
-    Data.DescriptorSetLayouts.Add("Textures", textureLayout);
   }
 
   private unsafe void CreateDescriptorPool() {
@@ -255,7 +247,7 @@ public class UltralightPipeline(UltralightController controller, BufferUtils buf
     var colorAttachment = new AttachmentDescription {
       Format = shareData.SwapchainImageFormat,
       Samples = SampleCountFlags.Count1Bit,
-      LoadOp = AttachmentLoadOp.Load,
+      LoadOp = AttachmentLoadOp.Clear,
       StoreOp = AttachmentStoreOp.Store,
       StencilLoadOp = AttachmentLoadOp.DontCare,
       StencilStoreOp = AttachmentStoreOp.DontCare,
@@ -268,13 +260,31 @@ public class UltralightPipeline(UltralightController controller, BufferUtils buf
       Layout = ImageLayout.ColorAttachmentOptimal
     };
 
+    var bitmapAttachment = new AttachmentDescription {
+      Format = Format.B8G8R8A8Unorm,
+      Samples = SampleCountFlags.Count1Bit,
+      LoadOp = AttachmentLoadOp.DontCare,
+      StoreOp = AttachmentStoreOp.Store,
+      StencilLoadOp = AttachmentLoadOp.DontCare,
+      StencilStoreOp = AttachmentStoreOp.DontCare,
+      InitialLayout = ImageLayout.Undefined,
+      FinalLayout = ImageLayout.ShaderReadOnlyOptimal
+    };
+
+    var bitmapAttachmentRef = new AttachmentReference {
+      Attachment = 1,
+      Layout = ImageLayout.ShaderReadOnlyOptimal
+    };
+
+    var (inputAttachmentsMem, inputAttachmentsSize) = RegisterMemory(new[] { bitmapAttachmentRef });
+
     var subpass = new SubpassDescription {
       PipelineBindPoint = PipelineBindPoint.Graphics,
       ColorAttachmentCount = 1,
-      PColorAttachments = &colorAttachmentRef
+      PColorAttachments = &colorAttachmentRef,
+      InputAttachmentCount = inputAttachmentsSize,
+      PInputAttachments = (AttachmentReference*)inputAttachmentsMem.Pointer
     };
-
-    var attachments = new[] { colorAttachment };
 
     var dependency = new SubpassDependency() {
       SrcSubpass = Vk.SubpassExternal,
@@ -284,6 +294,8 @@ public class UltralightPipeline(UltralightController controller, BufferUtils buf
       DstStageMask = PipelineStageFlags.ColorAttachmentOutputBit | PipelineStageFlags.EarlyFragmentTestsBit,
       DstAccessMask = AccessFlags.ColorAttachmentWriteBit | AccessFlags.DepthStencilAttachmentWriteBit
     };
+
+    var attachments = new[] { colorAttachment, bitmapAttachment };
 
     var (attachmentMem, attachmentSize) = RegisterMemory(attachments);
     MemoryHandles.Add(attachmentMem);
@@ -328,8 +340,8 @@ public class UltralightPipeline(UltralightController controller, BufferUtils buf
 
     var shaderStages = stackalloc[] { vertShaderStageInfo, fragShaderStageInfo };
 
-    // Don't think we would have the usual vertex bindings here given we just have a quad
-    var (setLayoutsMem, setLayoutsSize) = RegisterMemory(Data.DescriptorSetLayouts.Values.ToArray());
+    var layouts = Data.PipelineSets.Values.Select(set => set.Layout).ToArray();
+    var (setLayoutsMem, setLayoutsSize) = RegisterMemory(layouts);
 
     var viewport = new Viewport {
       X = 0.0f,
@@ -450,23 +462,4 @@ public class UltralightPipeline(UltralightController controller, BufferUtils buf
 
     logger.LogInformation("Created Ultralight pipeline.");
   }
-
-  private unsafe ShaderModule CreateShaderModule(byte[] code) {
-    var (codeMem, codeSize) = RegisterMemory(code);
-
-    var createInfo = new ShaderModuleCreateInfo {
-      SType = StructureType.ShaderModuleCreateInfo,
-      CodeSize = codeSize,
-      PCode = (uint*)codeMem.Pointer
-    };
-
-    var shaderModule = new ShaderModule();
-    if (shareData.vk.CreateShaderModule(shareData.Device, &createInfo, null, &shaderModule) != Result.Success) {
-      throw new Exception("failed to create shader module!");
-    }
-
-    return shaderModule;
-  }
-
-
 }

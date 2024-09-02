@@ -32,7 +32,6 @@ public class JoltCharacterTransformSystem(EntityManager em, JoltManager jm, ILog
         Rotation = rotation
       };
 
-      logger.LogInformation("JoltCharacterTransformSystem :: Updating entity {key} with new transform {newTransform}", key, newTransform);
       em.UpdateEntityComponent(key, newTransform);
     }
   }

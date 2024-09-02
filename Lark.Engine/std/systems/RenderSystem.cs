@@ -3,14 +3,14 @@ using System.Collections.Frozen;
 using System.Collections.Immutable;
 using System.Numerics;
 using Lark.Engine.ecs;
-using Lark.Engine.Model;
+using Lark.Engine.model;
 using Lark.Engine.pipeline;
 using Microsoft.Extensions.Logging;
 using Silk.NET.Maths;
 
 namespace Lark.Engine.std;
 
-public class RenderSystem(ILogger<RenderSystem> logger, EntityManager em, TimeManager tm, LarkVulkanData data, ModelUtils modelUtils) : LarkSystem, ILarkSystemInit, ILarkSystemBeforeDraw {
+public class RenderSystem(ILogger<RenderSystem> logger, EntityManager em, LarkVulkanData data, ModelUtils modelUtils) : LarkSystem, ILarkSystemInit, ILarkSystemBeforeDraw {
   public override int Priority => 1001;
   public override Type[] RequiredComponents => [typeof(MeshComponent), typeof(MetadataComponent), typeof(GlobalTransformComponent)];
 
@@ -70,7 +70,6 @@ public class RenderSystem(ILogger<RenderSystem> logger, EntityManager em, TimeMa
   }
 
   public void BeforeDraw() {
-    logger.LogInformation("{frame} :: RenderSystem update instances", tm.TotalFrames);
     foreach (var (key, components) in em.GetEntitiesWithComponentsSync(RequiredComponents)) {
       var transform = components.Get<GlobalTransformComponent>();
       if (!entityToInstance.ContainsKey(key)) {

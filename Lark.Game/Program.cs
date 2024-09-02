@@ -12,7 +12,7 @@ builder.Services
   .AddLarkSTD()
   .AddLarkJolt()
   // .AddLarkPhysx(builder.Configuration)
-  // .AddLarkUltralight(builder.Configuration)
+  .AddLarkUltralight(builder.Configuration)
   .AddGameSystems()
   .AddSerilog(new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)

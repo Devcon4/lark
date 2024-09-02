@@ -53,6 +53,17 @@ public class EntityManager(ILogger<EntityManager> logger) : LarkManager {
     return entities.Count;
   }
 
+  public ReadOnlySpan<ValueTuple<Guid, FrozenSet<ILarkComponent>, FrozenSet<Type>>> GetEntities() {
+    var entitiesList = new ValueTuple<Guid, FrozenSet<ILarkComponent>, FrozenSet<Type>>[entities.Count];
+    int i = 0;
+    foreach (var entity in entities) {
+      entitiesList[i] = new(entity.Key, entity.Value, entityComponents[entity.Key]);
+      i++;
+    }
+
+    return entitiesList;
+  }
+
   // GetEntity(type[] componentTypes): Find the first entity that has all of the specified components.
   public ValueTuple<Guid, FrozenSet<ILarkComponent>> GetEntity(params Type[] componentTypes) {
     var componentTypeSet = new HashSet<Type>(componentTypes);

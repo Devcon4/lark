@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Microsoft.Extensions.Logging;
 using Silk.NET.Vulkan;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -11,7 +12,9 @@ namespace Lark.Engine.pipeline;
 
 public struct RawImageInfo { }
 
-public class ImageUtils(LarkVulkanData data, BufferUtils bufferUtils, CommandUtils commandUtils) {
+public record TransitionInfo(AccessFlags SourceMask, AccessFlags DestinationMask, PipelineStageFlags SourceStage, PipelineStageFlags DestinationStage);
+
+public class ImageUtils(LarkVulkanData data, BufferUtils bufferUtils, CommandUtils commandUtils, ILogger<ImageUtils> logger) {
 
   public unsafe void CreateTexture(ReadOnlyMemory<byte> memory, ref Image image, ref DeviceMemory imageMemory) {
     var rawImage = SixLabors.ImageSharp.Image.Load<Rgba32>(memory.Span);
@@ -153,7 +156,18 @@ public class ImageUtils(LarkVulkanData data, BufferUtils bufferUtils, CommandUti
     return imageView;
   }
 
-  public unsafe void TransitionImageLayout(Image image, ImageLayout oldLayout, ImageLayout newLayout) {
+  public unsafe void TransitionImageLayout(ref LarkImage image, ImageLayout newLayout, ImageAspectFlags aspectFlags = ImageAspectFlags.ColorBit) {
+    if (image.Layout == newLayout) {
+      // logger.LogWarning("Image {id} is already {newLayout}", image.Id, newLayout);
+      return;
+    }
+
+    // logger.LogInformation("Transitioning image {id}: {originalLayout} -> {newLayout}", image.Id, image.Layout, newLayout);
+    TransitionImageLayout(image.Image, image.Layout, newLayout, aspectFlags);
+    image.Layout = newLayout;
+  }
+
+  public unsafe void TransitionImageLayout(Image image, ImageLayout oldLayout, ImageLayout newLayout, ImageAspectFlags aspectFlags = ImageAspectFlags.ColorBit) {
     var commandBuffer = commandUtils.BeginSingleTimeCommands();
 
     var barrier = new ImageMemoryBarrier {
@@ -164,7 +178,7 @@ public class ImageUtils(LarkVulkanData data, BufferUtils bufferUtils, CommandUti
       DstQueueFamilyIndex = Vk.QueueFamilyIgnored,
       Image = image,
       SubresourceRange = new ImageSubresourceRange {
-        AspectMask = ImageAspectFlags.ColorBit,
+        AspectMask = aspectFlags,
         BaseMipLevel = 0,
         LevelCount = 1,
         BaseArrayLayer = 0,
@@ -172,31 +186,17 @@ public class ImageUtils(LarkVulkanData data, BufferUtils bufferUtils, CommandUti
       }
     };
 
-    PipelineStageFlags sourceStage;
-    PipelineStageFlags destinationStage;
-
-    if (oldLayout == ImageLayout.Undefined && newLayout == ImageLayout.TransferDstOptimal) {
-      barrier.SrcAccessMask = 0;
-      barrier.DstAccessMask = AccessFlags.TransferWriteBit;
-
-      sourceStage = PipelineStageFlags.TopOfPipeBit;
-      destinationStage = PipelineStageFlags.TransferBit;
+    if (!TransitionInfos.TryGetValue((oldLayout, newLayout), out var transitionInfo)) {
+      throw new Exception($"unsupported layout transition from {oldLayout} to {newLayout}");
     }
-    else if (oldLayout == ImageLayout.TransferDstOptimal && newLayout == ImageLayout.ShaderReadOnlyOptimal) {
-      barrier.SrcAccessMask = AccessFlags.TransferWriteBit;
-      barrier.DstAccessMask = AccessFlags.ShaderReadBit;
 
-      sourceStage = PipelineStageFlags.TransferBit;
-      destinationStage = PipelineStageFlags.FragmentShaderBit;
-    }
-    else {
-      throw new Exception("unsupported layout transition!");
-    }
+    barrier.SrcAccessMask = transitionInfo.SourceMask;
+    barrier.DstAccessMask = transitionInfo.DestinationMask;
 
     data.vk.CmdPipelineBarrier(
       commandBuffer,
-      sourceStage,
-      destinationStage,
+      transitionInfo.SourceStage,
+      transitionInfo.DestinationStage,
       0,
       0,
       null,
@@ -208,6 +208,19 @@ public class ImageUtils(LarkVulkanData data, BufferUtils bufferUtils, CommandUti
 
     commandUtils.EndSingleTimeCommands(commandBuffer);
   }
+
+  private static readonly Dictionary<(ImageLayout, ImageLayout), TransitionInfo> TransitionInfos = new() {
+    { (ImageLayout.Undefined, ImageLayout.TransferDstOptimal), new TransitionInfo(0, AccessFlags.TransferWriteBit, PipelineStageFlags.TopOfPipeBit, PipelineStageFlags.TransferBit) },
+    { (ImageLayout.Undefined, ImageLayout.ColorAttachmentOptimal), new TransitionInfo(0, AccessFlags.ColorAttachmentWriteBit, PipelineStageFlags.TopOfPipeBit, PipelineStageFlags.ColorAttachmentOutputBit) },
+    { (ImageLayout.Undefined, ImageLayout.DepthStencilAttachmentOptimal), new TransitionInfo(0, AccessFlags.DepthStencilAttachmentReadBit | AccessFlags.DepthStencilAttachmentWriteBit, PipelineStageFlags.TopOfPipeBit, PipelineStageFlags.EarlyFragmentTestsBit) },
+    { (ImageLayout.Undefined, ImageLayout.ShaderReadOnlyOptimal), new TransitionInfo(0, AccessFlags.ShaderReadBit, PipelineStageFlags.TopOfPipeBit, PipelineStageFlags.FragmentShaderBit) },
+    { (ImageLayout.TransferDstOptimal, ImageLayout.ShaderReadOnlyOptimal), new TransitionInfo(AccessFlags.TransferWriteBit, AccessFlags.ShaderReadBit, PipelineStageFlags.TransferBit, PipelineStageFlags.FragmentShaderBit) },
+    { (ImageLayout.ColorAttachmentOptimal, ImageLayout.PresentSrcKhr), new TransitionInfo(AccessFlags.ColorAttachmentWriteBit, AccessFlags.ColorAttachmentWriteBit, PipelineStageFlags.ColorAttachmentOutputBit, PipelineStageFlags.BottomOfPipeBit) },
+    { (ImageLayout.ColorAttachmentOptimal, ImageLayout.ShaderReadOnlyOptimal), new TransitionInfo(AccessFlags.ColorAttachmentWriteBit, AccessFlags.ShaderReadBit, PipelineStageFlags.ColorAttachmentOutputBit, PipelineStageFlags.FragmentShaderBit) },
+    { (ImageLayout.DepthStencilAttachmentOptimal, ImageLayout.ShaderReadOnlyOptimal), new TransitionInfo(AccessFlags.DepthStencilAttachmentReadBit, AccessFlags.ShaderReadBit, PipelineStageFlags.EarlyFragmentTestsBit, PipelineStageFlags.FragmentShaderBit) },
+    { (ImageLayout.ShaderReadOnlyOptimal, ImageLayout.ColorAttachmentOptimal), new TransitionInfo(AccessFlags.ShaderReadBit, AccessFlags.ColorAttachmentWriteBit, PipelineStageFlags.FragmentShaderBit, PipelineStageFlags.ColorAttachmentOutputBit) },
+    { (ImageLayout.ShaderReadOnlyOptimal, ImageLayout.DepthStencilAttachmentOptimal), new TransitionInfo(AccessFlags.ShaderReadBit, AccessFlags.DepthStencilAttachmentReadBit | AccessFlags.DepthStencilAttachmentWriteBit, PipelineStageFlags.FragmentShaderBit, PipelineStageFlags.EarlyFragmentTestsBit) },
+  };
 
   public unsafe void CopyBufferToImage(Buffer buffer, Image image, uint width, uint height) {
     var commandBuffer = commandUtils.BeginSingleTimeCommands();

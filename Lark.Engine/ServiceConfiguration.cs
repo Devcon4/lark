@@ -1,8 +1,9 @@
 using Lark.Engine.ecs;
+using Lark.Engine.gi;
 using Lark.Engine.jolt;
 using Lark.Engine.jolt.managers;
 using Lark.Engine.jolt.systems;
-using Lark.Engine.Model;
+using Lark.Engine.model;
 using Lark.Engine.pipeline;
 using Lark.Engine.std;
 using Lark.Engine.std.systems;
@@ -119,6 +120,9 @@ public static class ServiceConfiguration {
 
     services.AddLarkModule<ActionModule>();
 
+    services.AddLarkManager<LightProbeManager>();
+    services.AddLarkSystem<PointLightSystem>();
+
     return services;
   }
 
@@ -157,7 +161,14 @@ public static class ServiceConfiguration {
     services.AddSingleton<ModelUtils>();
     services.AddSingleton<ModelBuilder>();
 
-    services.AddLarkPipeline<PBRPipeline>();
+    services.AddLarkPipeline<GeometryPipeline>();
+    services.AddLarkPipeline<LightingPipeline>();
+    services.AddLarkPipeline<CompositePipeline>();
+
+    services.AddSingleton<GeometryPassData>();
+    services.AddSingleton<LightingPassData>();
+    services.AddSingleton<UIPassData>();
+
 
     return services;
   }

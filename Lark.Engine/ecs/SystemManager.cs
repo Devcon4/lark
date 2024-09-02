@@ -1,7 +1,11 @@
 using System.Collections.Frozen;
 using System.Collections.Immutable;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Threading.Channels;
 using System.Threading.Tasks.Dataflow;
+using CommunityToolkit.HighPerformance;
+using CommunityToolkit.HighPerformance.Helpers;
 using Lark.Engine.pipeline;
 using Microsoft.Extensions.Logging;
 using Serilog.Context;
@@ -9,6 +13,43 @@ using Silk.NET.OpenGL;
 using Silk.NET.Vulkan;
 
 namespace Lark.Engine.ecs;
+
+public readonly struct UpdateJob : IAction2D {
+  private readonly ILarkSystem[] systems;
+  private readonly (Guid, FrozenSet<ILarkComponent>, FrozenSet<Type>)[] entities;
+
+  public UpdateJob(ref ILarkSystem[] systems, ref (Guid, FrozenSet<ILarkComponent>, FrozenSet<Type>)[] entities) {
+    this.systems = systems;
+    this.entities = entities;
+  }
+
+  [MethodImpl(MethodImplOptions.AggressiveInlining)]
+  public readonly void Invoke(int i, int j) {
+    var system = systems[i];
+    var (key, components, types) = entities[j];
+    var hasGeneric = types.Any(t => t.IsGenericType);
+
+    if (!hasGeneric) {
+      if (types.IsSupersetOf(system.RequiredComponents)) {
+        system.Update((key, components));
+        return;
+      }
+    }
+
+    // If componentTypes has any generic types, we need to check the inheritance chain.
+    if (hasGeneric) {
+      foreach (var componentType in system.RequiredComponents) {
+        if (componentType.IsGenericType) {
+          // EntityCompoents will have full type records like Typeof(CastAbility<HeroMainAttack>), typeof(CastAbility<HeroAltAttack>), etc. In this example if we are looking for CastAbility<>, we need to check for all types that inherit from CastAbility<>.
+          if (types.Any(t => t.IsGenericType && (t.GetGenericTypeDefinition() == componentType || t.IsAssignableFrom(componentType)))) {
+            system.Update((key, components));
+            return;
+          }
+        }
+      }
+    }
+  }
+}
 
 public class SystemManager(
   LarkVulkanData data,
@@ -70,6 +111,35 @@ public class SystemManager(
   private readonly List<ILarkSystemAfterUpdate> AfterUpdateSystems = systems.OrderByDescending(s => s.Priority).Where(s => s is ILarkSystemAfterUpdate).Cast<ILarkSystemAfterUpdate>().ToList();
   private readonly List<ILarkSystemBeforeDraw> BeforeDrawSystems = systems.OrderByDescending(s => s.Priority).Where(s => s is ILarkSystemBeforeDraw).Cast<ILarkSystemBeforeDraw>().ToList();
 
+  public async Task RunParallelHelper() {
+    foreach (var system in BeforeUpdateSystems) {
+      system.BeforeUpdate();
+    }
+
+    foreach (var system in systems) {
+      var entities = entityManager.GetEntitiesWithComponentsSync(system.RequiredComponents);
+
+      foreach (var (key, components) in entities) {
+        system.Update((key, components));
+      }
+    }
+    var entitySpan = entityManager.GetEntities().ToArray();
+    var systemSpan = systems.ToArray();
+    var entityRange = new Range(0, entitySpan.Length);
+    var systemRange = new Range(0, systemSpan.Length);
+    ParallelHelper.For2D(systemRange, entityRange, new UpdateJob(ref systemSpan, ref entitySpan));
+
+    foreach (var system in AfterUpdateSystems) {
+      system.AfterUpdate();
+    }
+
+    foreach (var system in BeforeDrawSystems) {
+      system.BeforeDraw();
+    }
+
+    await Task.CompletedTask;
+  }
+
   public async Task Run() {
 
     // var maxCount = entityManager.GetEntitiesCount() * systems.Count();
@@ -127,7 +197,7 @@ public class SystemManager(
   }
 
 
-  public async Task RunOld() {
+  public async Task RunOldest() {
 
     // Extra 24 buffer.
     var totalEntities = entityManager.GetEntitiesCount() + 24;

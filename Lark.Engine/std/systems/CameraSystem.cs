@@ -1,7 +1,7 @@
 using System.Collections.Frozen;
 using System.Numerics;
 using Lark.Engine.ecs;
-using Lark.Engine.Model;
+using Lark.Engine.model;
 using Lark.Engine.pipeline;
 using Microsoft.Extensions.Logging;
 using Silk.NET.Maths;
@@ -9,7 +9,7 @@ using Silk.NET.Maths;
 namespace Lark.Engine.std;
 
 
-public class CameraSystem(EntityManager em, LarkVulkanData data, ILogger<CameraManager> logger, TimeManager tm) : LarkSystem, ILarkSystemBeforeDraw {
+public class CameraSystem(EntityManager em, LarkVulkanData data) : LarkSystem, ILarkSystemBeforeDraw {
   public override int Priority => 1000;
   public override Type[] RequiredComponents => [typeof(GlobalTransformComponent), typeof(CameraComponent)];
 
@@ -40,8 +40,6 @@ public class CameraSystem(EntityManager em, LarkVulkanData data, ILogger<CameraM
         Fov = camera.Fov,
         Transform = new LarkTransform(transform.Position.ToGeneric(), transform.Rotation.ToGeneric(), transform.Scale.ToGeneric()),
       };
-
-      logger.LogInformation("{frame} :: Updating camera {key} with new pos {newPos} :: {oldPos}", tm.TotalFrames, key, newCamera.Transform.Translation, cameraLookup[key].Transform.Translation);
 
       cameraLookup[key] = newCamera;
     }

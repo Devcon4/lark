@@ -40,6 +40,7 @@ export default class PlayerView extends LitElement {
       display: flex;
       justify-content: space-between;
       background-color: #333;
+      opacity: 0.8;
 
       padding: 1rem;
     }

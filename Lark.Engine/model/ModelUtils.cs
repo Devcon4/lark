@@ -10,9 +10,9 @@ using System.Runtime.CompilerServices;
 using System.Numerics;
 using Lark.Engine.std;
 
-namespace Lark.Engine.Model;
+namespace Lark.Engine.model;
 
-public class ModelUtils(LarkVulkanData data, ImageUtils imageUtils, BufferUtils bufferUtils, ILogger<ModelUtils> logger, PBRPipeline pipeline) {
+public class ModelUtils(LarkVulkanData data, ImageUtils imageUtils, BufferUtils bufferUtils, ILogger<ModelUtils> logger, GeometryPipeline pipeline) {
 
 
   public LarkModel LoadFile(string modelName) {
@@ -231,7 +231,7 @@ public class ModelUtils(LarkVulkanData data, ImageUtils imageUtils, BufferUtils 
   // TODO: ModelUtils needs to know what DescriptorSetLayout to use. If we ref PBRPipeline here, we create a circular reference. Refactor this to be more elegant.
   public unsafe void CreateDescriptorSets(LarkModel model) {
 
-    var matrixLayouts = Enumerable.Repeat(pipeline.Data.DescriptorSetLayouts[PBRPipeline.Layouts.Matricies], LarkVulkanData.MaxFramesInFlight).ToArray().AsMemory();
+    var matrixLayouts = Enumerable.Repeat(pipeline.DescriptorSetLayouts[GeometryPipeline.Layouts.Matricies], LarkVulkanData.MaxFramesInFlight).ToArray().AsMemory();
     var handler = matrixLayouts.Pin();
 
     // for each MaxFramesInFlight, create the ubo descriptor set.
@@ -268,7 +268,7 @@ public class ModelUtils(LarkVulkanData data, ImageUtils imageUtils, BufferUtils 
 
     // for each MaxFramesInFlight, create the ubo descriptor set.
     for (var j = 0; j < model.Images.Length; j++) {
-      var textureLayouts = Enumerable.Repeat(pipeline.Data.DescriptorSetLayouts[PBRPipeline.Layouts.Textures], LarkVulkanData.MaxFramesInFlight).ToArray().AsMemory();
+      var textureLayouts = Enumerable.Repeat(pipeline.DescriptorSetLayouts[GeometryPipeline.Layouts.Textures], LarkVulkanData.MaxFramesInFlight).ToArray().AsMemory();
       var texturesHandler = textureLayouts.Pin();
 
       var textureAllocInfo = new DescriptorSetAllocateInfo {

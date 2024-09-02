@@ -53,8 +53,6 @@ public class CharacterSystem(ILogger<CharacterSystem> logger, EntityManager em, 
       var totalPitch = Math.Clamp(displacement.TotalPitch - deltaMouseMovement.Y, minPitch, maxPitch) - displacement.TotalPitch;
       pitchRotation = Quaternion.CreateFromAxisAngle(Vector3.UnitX, totalPitch);
 
-      logger.LogInformation("LookAt :: {key} :: {pitchRotation} :: {yawRotation} :: {playerRotation} :: {cameraRotation}", key, pitchRotation, yawRotation, targetTransform.Rotation * pitchRotation, cameraTransform.Rotation * yawRotation);
-
       // Apply the yaw rotation to the player
       var newTargetTransform = targetTransform with { Rotation = targetTransform.Rotation * yawRotation };
       em.UpdateEntityComponent(targetId, newTargetTransform);
@@ -89,7 +87,6 @@ public class CharacterSystem(ILogger<CharacterSystem> logger, EntityManager em, 
 
       em.UpdateEntityComponent(key, modifier);
 
-      logger.LogInformation("{frame} :: Move :: {key} :: {direction} :: {position}", tm.TotalFrames, key, direction, transform.Position);
     };
   }
 

@@ -1,4 +1,5 @@
-using Lark.Engine.Model;
+using System.Runtime;
+using Lark.Engine.model;
 using Microsoft.Extensions.Logging;
 using Silk.NET.Maths;
 using Silk.NET.Vulkan;
@@ -128,10 +129,18 @@ public class SwapchainSegment(LarkVulkanData data,
     }
 
     data.VkSwapchain.GetSwapchainImages(data.Device, data.Swapchain, &imageCount, null);
-    data.SwapchainImages = new Image[imageCount];
-    fixed (Image* swapchainImage = data.SwapchainImages) {
-      data.VkSwapchain.GetSwapchainImages(data.Device, data.Swapchain, &imageCount, swapchainImage);
+
+    Memory<Image> swapchainMemory = new(new Image[imageCount]);
+    var handle = swapchainMemory.Pin();
+
+    data.VkSwapchain.GetSwapchainImages(data.Device, data.Swapchain, &imageCount, (Image*)handle.Pointer);
+
+    // We need to map each image to the larkImage in the swapchainImages array.
+    for (var i = 0; i < imageCount; i++) {
+      data.SwapchainImages.Span[i].Image = swapchainMemory.Span[i];
     }
+
+    handle.Dispose();
 
     data.SwapchainImageFormat = surfaceFormat.Format;
     data.SwapchainExtent = extent;
@@ -158,14 +167,20 @@ public class SwapchainSegment(LarkVulkanData data,
     // data.vk.DestroyPipelineLayout(data.Device, data.PipelineLayout, null);
     // data.vk.DestroyRenderPass(data.Device, data.RenderPass, null);
 
-    foreach (var imageView in data.SwapchainImageViews) {
-      data.vk.DestroyImageView(data.Device, imageView, null);
-    }
+    // foreach (var imageView in data.SwapchainImageViews) {
+    //   data.vk.DestroyImageView(data.Device, imageView, null);
+    // }
 
     if (data.VkSwapchain is null)
       throw new Exception("VkSwapchain is null.");
 
     data.VkSwapchain.DestroySwapchain(data.Device, data.Swapchain, null);
+
+    // Swapchain images are special, they need to be destroyed by the swapchain.
+    // This is why we don't use larkImage.Dispose(data) here.
+    foreach (var larkImage in data.SwapchainImages.Span) {
+      data.vk.DestroyImageView(data.Device, larkImage.View, null);
+    }
   }
 
   private Extent2D ChooseSwapExtent(SurfaceCapabilitiesKHR capabilities) {

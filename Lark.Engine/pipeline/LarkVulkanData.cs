@@ -5,9 +5,10 @@ using Semaphore = Silk.NET.Vulkan.Semaphore;
 using Buffer = Silk.NET.Vulkan.Buffer;
 using Image = Silk.NET.Vulkan.Image;
 using Silk.NET.Maths;
-using Lark.Engine.Model;
+using Lark.Engine.model;
 using System.Diagnostics;
 using System.Collections.Concurrent;
+using Lark.Engine.gi;
 
 namespace Lark.Engine.pipeline;
 
@@ -20,6 +21,7 @@ public class LarkVulkanData {
   public Dictionary<Guid, LarkInstance> instances = new();
   public Dictionary<Guid, LarkModel> models = new();
   public Dictionary<Guid, LarkCamera> cameras = new();
+  public Dictionary<Guid, LarkLight> lights = new();
 
   public bool EnableValidationLayers = true;
 
@@ -33,10 +35,11 @@ public class LarkVulkanData {
   public Queue PresentQueue;
 
   public SwapchainKHR Swapchain;
-  public Image[] SwapchainImages = null!;
+  public Memory<LarkImage> SwapchainImages = new(new LarkImage[MaxFramesInFlight]);
+  // public Image[] SwapchainImages = null!;
   public Format SwapchainImageFormat;
   public Extent2D SwapchainExtent;
-  public ImageView[] SwapchainImageViews = null!;
+  // public ImageView[] SwapchainImageViews = null!;
   public CommandPool CommandPool;
   public DescriptorPool DescriptorPool;
   public DescriptorSet[] DescriptorSets = null!;

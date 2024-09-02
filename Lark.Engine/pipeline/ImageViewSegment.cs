@@ -4,12 +4,10 @@ namespace Lark.Engine.pipeline;
 
 public class ImageViewSegment(LarkVulkanData data) {
   public unsafe void CreateImageViews() {
-    data.SwapchainImageViews = new ImageView[data.SwapchainImages.Length];
-
     for (var i = 0; i < data.SwapchainImages.Length; i++) {
       var createInfo = new ImageViewCreateInfo {
         SType = StructureType.ImageViewCreateInfo,
-        Image = data.SwapchainImages[i],
+        Image = data.SwapchainImages.Span[i].Image,
         ViewType = ImageViewType.Type2D,
         Format = data.SwapchainImageFormat,
         Components = {
@@ -32,7 +30,7 @@ public class ImageViewSegment(LarkVulkanData data) {
         throw new Exception("failed to create image views!");
       }
 
-      data.SwapchainImageViews[i] = imageView;
+      data.SwapchainImages.Span[i].View = imageView;
     }
   }
 }

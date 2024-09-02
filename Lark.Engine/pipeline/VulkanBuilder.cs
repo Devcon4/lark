@@ -1,4 +1,4 @@
-using Lark.Engine.Model;
+using Lark.Engine.model;
 using Lark.Engine.std;
 using Lark.Engine.Ultralight;
 using Microsoft.Extensions.Logging;
@@ -41,6 +41,7 @@ public class VulkanBuilder(
     syncSegment.CreateSyncObjects();
 
     foreach (var pipeline in pipelines.OrderByDescending(p => p.Priority)) {
+      logger.LogDebug("Starting pipeline {pipeline}", pipeline.GetType().Name);
       pipeline.Start();
     }
 
@@ -97,8 +98,6 @@ public class VulkanBuilder(
 
     var renderingCamera = d.cameras.Values.FirstOrDefault(c => c.Active, LarkCamera.DefaultCamera());
 
-    logger.LogInformation("{frame} :: RenderCamera position :: {position}", timeManager.TotalFrames, renderingCamera.Transform.Translation);
-
     // logger.LogInformation("{currentF} \t:: Δ {deltaTime}ms \t:: {fps}", currentF, deltaTime.TotalMilliseconds, fps);
 
     data.vk.WaitForFences(data.Device, 1, data.InFlightFences[data.CurrentFrame], true, ulong.MaxValue);
@@ -118,6 +117,7 @@ public class VulkanBuilder(
     }
 
     foreach (var pipeline in pipelines.OrderByDescending(p => p.Priority)) {
+      logger.LogDebug("Updating pipeline {pipeline}", pipeline.GetType().Name);
       pipeline.Update(imageIndex);
     }
 

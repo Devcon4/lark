@@ -6,12 +6,11 @@ using Lark.Engine.std;
 using Microsoft.Extensions.Logging;
 
 namespace Lark.Engine.std.systems;
-public class GlobalTransformSystem(SceneGraphManager sceneGraphManager, EntityManager em, TimeManager tm, ILogger<GlobalTransformSystem> logger) : LarkSystem, ILarkSystemBeforeUpdate, ILarkSystemBeforeDraw {
+public class GlobalTransformSystem(SceneGraphManager sceneGraphManager, EntityManager em) : LarkSystem, ILarkSystemBeforeUpdate, ILarkSystemBeforeDraw {
 
   public override Type[] RequiredComponents => [typeof(TransformComponent)];
 
   public void BeforeDraw() {
-    logger.LogInformation("{frame} :: GlobalTransformSystem :: Updating global transforms", tm.TotalFrames);
     sceneGraphManager.UpdateGlobalTransforms();
   }
 
