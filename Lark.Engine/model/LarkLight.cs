@@ -18,6 +18,7 @@ public class LarkLight {
   public LarkLightShader ToShader() => new() {
     Color = new Vector4(Settings.Color.R, Settings.Color.G, Settings.Color.B, Settings.Color.A),
     Position = new Vector4(Transform.Translation.X, Transform.Translation.Y, Transform.Translation.Z, 1.0f),
+    Rotation = new Vector4(Transform.Rotation.X, Transform.Rotation.Y, Transform.Rotation.Z, Transform.Rotation.W),
     Options = Settings.OptionsVector
   };
 }
@@ -26,5 +27,6 @@ public class LarkLight {
 public struct LarkLightShader {
   public Vector4 Color;
   public Vector4 Position;
+  public Vector4 Rotation;
   public Vector4 Options; // x = Intensity, y = Range, z = Angle, w = unused/padding
 }

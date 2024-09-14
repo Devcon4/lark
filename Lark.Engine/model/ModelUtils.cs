@@ -9,6 +9,15 @@ using Buffer = Silk.NET.Vulkan.Buffer;
 using System.Runtime.CompilerServices;
 using System.Numerics;
 using Lark.Engine.std;
+using SharpGLTF.Materials;
+using System.Linq;
+using SharpGLTF.Memory;
+using Evergine.Bindings.RenderDoc;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
+using SixLabors.ImageSharp.Processing.Processors;
+using SixLabors.ImageSharp.Advanced;
 
 namespace Lark.Engine.model;
 
@@ -47,6 +56,7 @@ public class ModelUtils(LarkVulkanData data, ImageUtils imageUtils, BufferUtils 
     logger.LogDebug("{modelName}:: Created descriptor sets.", modelName);
     CreateMeshBuffers(larkModel);
     logger.LogDebug("{modelName}:: Created mesh buffers.", modelName);
+
 
     logger.LogDebug("{modelName}:: Complete!", modelName);
     return larkModel;
@@ -207,12 +217,16 @@ public class ModelUtils(LarkVulkanData data, ImageUtils imageUtils, BufferUtils 
       new() {
         Type = DescriptorType.CombinedImageSampler,
         DescriptorCount = (uint)model.Images.Length * LarkVulkanData.MaxFramesInFlight
+      },
+      new() {
+        Type = DescriptorType.CombinedImageSampler,
+        DescriptorCount = (uint)model.Materials.Length * LarkVulkanData.MaxFramesInFlight
       }
     };
 
     // maxSizes is the total number of descriptor sets that can be allocated from the pool.
     // It is the number of images plus one for the uniform buffer times the number of frames in flight.
-    var maxSizes = (1 + (uint)model.Images.Length) * LarkVulkanData.MaxFramesInFlight;
+    var maxSizes = (1 + (uint)model.Images.Length) * LarkVulkanData.MaxFramesInFlight + (uint)model.Materials.Length * LarkVulkanData.MaxFramesInFlight;
 
     var poolInfo = new DescriptorPoolCreateInfo {
       SType = StructureType.DescriptorPoolCreateInfo,
@@ -268,7 +282,7 @@ public class ModelUtils(LarkVulkanData data, ImageUtils imageUtils, BufferUtils 
 
     // for each MaxFramesInFlight, create the ubo descriptor set.
     for (var j = 0; j < model.Images.Length; j++) {
-      var textureLayouts = Enumerable.Repeat(pipeline.DescriptorSetLayouts[GeometryPipeline.Layouts.Textures], LarkVulkanData.MaxFramesInFlight).ToArray().AsMemory();
+      var textureLayouts = Enumerable.Repeat(pipeline.DescriptorSetLayouts[GeometryPipeline.Layouts.Albedo], LarkVulkanData.MaxFramesInFlight).ToArray().AsMemory();
       var texturesHandler = textureLayouts.Pin();
 
       var textureAllocInfo = new DescriptorSetAllocateInfo {
@@ -305,6 +319,47 @@ public class ModelUtils(LarkVulkanData data, ImageUtils imageUtils, BufferUtils 
         model.Images.Span[j].DescriptorSets = descriptorSets;
       }
     }
+
+    // for each material, create the mro descriptor set.
+    for (var j = 0; j < model.Materials.Length; j++) {
+      var textureLayouts = Enumerable.Repeat(pipeline.DescriptorSetLayouts[GeometryPipeline.Layouts.MRO], LarkVulkanData.MaxFramesInFlight).ToArray().AsMemory();
+      var texturesHandler = textureLayouts.Pin();
+
+      var textureAllocInfo = new DescriptorSetAllocateInfo {
+        SType = StructureType.DescriptorSetAllocateInfo,
+        DescriptorPool = model.DescriptorPool,
+        DescriptorSetCount = LarkVulkanData.MaxFramesInFlight,
+        PSetLayouts = (DescriptorSetLayout*)texturesHandler.Pointer
+      };
+
+      var descriptorSets = new DescriptorSet[LarkVulkanData.MaxFramesInFlight];
+      if (data.vk.AllocateDescriptorSets(data.Device, &textureAllocInfo, descriptorSets) != Result.Success) {
+        throw new Exception("failed to allocate descriptor sets!");
+      }
+
+      for (var i = 0; i < LarkVulkanData.MaxFramesInFlight; i++) {
+        var imageInfo = new DescriptorImageInfo {
+          Sampler = model.Materials.Span[j].ORMTexture.Sampler,
+          ImageView = model.Materials.Span[j].ORMTexture.View,
+          ImageLayout = ImageLayout.ShaderReadOnlyOptimal
+        };
+
+        var materialDescriptorSet = new WriteDescriptorSet {
+          SType = StructureType.WriteDescriptorSet,
+          DstSet = descriptorSets[i],
+          DstBinding = 0,
+          DstArrayElement = 0,
+          DescriptorType = DescriptorType.CombinedImageSampler,
+          DescriptorCount = 1,
+          PImageInfo = &imageInfo
+        };
+
+        data.vk.UpdateDescriptorSets(data.Device, 1, &materialDescriptorSet, 0, null);
+
+        model.Materials.Span[j].ormDescriptorSets = descriptorSets;
+      }
+    }
+
   }
 
   // public unsafe void CreateDescriptorSets(LarkModel model) {
@@ -380,7 +435,8 @@ public class ModelUtils(LarkVulkanData data, ImageUtils imageUtils, BufferUtils 
     foreach (var mat in model.LogicalMaterials) {
       var diffTex = mat.GetDiffuseTexture();
       var larkMaterial = new LarkMaterial {
-        BaseColorTextureIndex = diffTex != null ? diffTex.LogicalIndex : null
+        BaseColorTextureIndex = diffTex != null ? diffTex.LogicalIndex : null,
+        ORMTexture = LoadORMTexture(model, mat?.LogicalIndex ?? 0)
       };
       var baseColorFactor = mat?.FindChannel("BaseColorFactor");
       if (baseColorFactor.HasValue) {
@@ -398,7 +454,118 @@ public class ModelUtils(LarkVulkanData data, ImageUtils imageUtils, BufferUtils 
     return materials.ToArray().AsMemory();
   }
 
+  private const int ORM_IMAGE_RESOLUTION = 128;
+  private Image<Rgba32> BuildFallbackORMImage(float occlusion = 0f, float metallic = 0f, float roughness = 0f) {
+    var image = new Image<Rgba32>(ORM_IMAGE_RESOLUTION, ORM_IMAGE_RESOLUTION);
+    for (var y = 0; y < ORM_IMAGE_RESOLUTION; y++) {
+      for (var x = 0; x < ORM_IMAGE_RESOLUTION; x++) {
+        image[x, y] = new Rgba32(
+          (byte)(occlusion * 255),
+          (byte)(metallic * 255),
+          (byte)(roughness * 255),
+          255
+        );
+      }
+    }
 
+    return image;
+  }
+
+  public LarkImage LoadORMTexture(ModelRoot model, int materialIndex) {
+    var material = model.LogicalMaterials[materialIndex];
+    var channels = material.Channels.Select(c => c.Key);
+
+    // BaseColor, MetallicRoughness, Normal, Occlusion, Emissive
+    logger.LogInformation("material {materialIndex} has channels: {channels}", materialIndex, string.Join(", ", channels));
+
+    var mb = material.ToMaterialBuilder();
+
+    var aoChannel = mb.GetChannel(KnownChannel.Occlusion);
+    var mrChannel = mb.GetChannel(KnownChannel.MetallicRoughness);
+
+    var aoTex = aoChannel?.GetValidTexture();
+    var mrTex = mrChannel?.GetValidTexture();
+
+    if (mrTex is null) {
+      mrChannel ??= mb.UseChannel(KnownChannel.MetallicRoughness);
+
+      mrTex = mrChannel.UseTexture();
+      var metallicParam = mrChannel.Parameters.FirstOrDefault(p => p.Key == KnownProperty.MetallicFactor);
+      var roughnessParam = mrChannel.Parameters.FirstOrDefault(p => p.Key == KnownProperty.RoughnessFactor);
+      var imageContent = BuildFallbackORMImage(
+        0f,
+        (float?)metallicParam.Value ?? 0f,
+        (float?)roughnessParam.Value ?? 0f
+      );
+      using var stream = new MemoryStream();
+      imageContent.SaveAsPng(stream);
+      stream.Seek(0, SeekOrigin.Begin);
+
+      mrTex.PrimaryImage = ImageBuilder.From(stream.ToArray());
+
+      stream.Dispose();
+    }
+
+    if (aoTex is null) {
+      aoChannel ??= mb.UseChannel(KnownChannel.Occlusion);
+
+      aoTex = aoChannel.UseTexture();
+      var occlusionParam = aoChannel.Parameters.FirstOrDefault(p => p.Key == KnownProperty.OcclusionStrength);
+
+      var imageContent = BuildFallbackORMImage(
+        (float?)occlusionParam.Value ?? 0f
+      );
+
+      using var stream = new MemoryStream();
+      imageContent.SaveAsPng(stream);
+      stream.Seek(0, SeekOrigin.Begin);
+
+      aoTex.PrimaryImage = ImageBuilder.From(stream.ToArray());
+
+      stream.Dispose();
+    }
+
+    var aoData = aoTex.PrimaryImage.Content.Content;
+    var mrData = mrTex.PrimaryImage.Content.Content;
+
+    // load both images as ImageSharp images
+    var aoImage = SixLabors.ImageSharp.Image.Load<Rgba32>(aoData.Span);
+    var mrImage = SixLabors.ImageSharp.Image.Load<Rgba32>(mrData.Span);
+
+    // If the images are not the same size, resize the smaller one to match the larger one.
+    if (aoImage.Width != mrImage.Width || aoImage.Height != mrImage.Height) {
+      var width = Math.Max(aoImage.Width, mrImage.Width);
+      var height = Math.Max(aoImage.Height, mrImage.Height);
+
+      aoImage.Mutate(x => x.Resize(width, height));
+      mrImage.Mutate(x => x.Resize(width, height));
+    }
+    // Combine the R channel of the AO image with the G and B channels of the MR image into a new image.
+    mrImage.ProcessPixelRows(aoImage, (src, dst) => {
+      for (var y = 0; y < src.Height; y++) {
+        var srcRow = src.GetRowSpan(y);
+        var dstRow = dst.GetRowSpan(y);
+
+        for (var x = 0; x < src.Width; x++) {
+          dstRow[x] = new Rgba32(srcRow[x].R, dstRow[x].G, dstRow[x].B, 255);
+        }
+      }
+    });
+
+    // copy mrImage to readonly memory
+    // var combinedData = new Memory<byte>(new byte[mrImage.Width * mrImage.Height * 4]);
+    // var combinedHandle = combinedData.Pin();
+    // mrImage.CopyPixelDataTo(combinedData.Span);
+    // combinedHandle.Dispose();
+
+    // Create a new LarkImage with the combined data.
+    var combinedImage = new LarkImage();
+    imageUtils.CreateTexture(mrImage, ref combinedImage.Image, ref combinedImage.Memory);
+    imageUtils.CreateImageView(combinedImage.Image, ref combinedImage.View);
+    imageUtils.CreateSampler(ref combinedImage.Sampler);
+
+    return combinedImage;
+  }
 
   public LarkNode LoadNode(Node inputNode, LarkModel model) {
     var larkNode = new LarkNode {
@@ -424,15 +591,31 @@ public class ModelUtils(LarkVulkanData data, ImageUtils imageUtils, BufferUtils 
 
       // Get the position attribute accessor.
       var posAccessor = primitive.GetVertexAccessor("POSITION");
+
+      if (posAccessor is null) {
+        logger.LogError("No positions found for {modelName}", model.ModelId);
+        continue;
+      }
+
       var posData = posAccessor.AsVector3Array().ToArray();
 
       // Get the normal attribute accessor.
       var normAccessor = primitive.GetVertexAccessor("NORMAL");
+
+      if (normAccessor is null) {
+        logger.LogError("No normals found for {modelName}", model.ModelId);
+        continue;
+      }
+
       var normData = normAccessor.AsVector3Array().ToArray();
 
       // Get the texture coordinate attribute accessor.
       var texAccessor = primitive.GetVertexAccessor("TEXCOORD_0");
-      var texData = texAccessor.AsVector2Array().ToArray();
+
+      Vector2[] texData = Enumerable.Repeat(new Vector2(0, 0), posData.Length).ToArray();
+      if (texAccessor is not null) {
+        texData = texAccessor.AsVector2Array().ToArray();
+      }
 
       // Build the vertices.
       for (var i = 0; i < posData.Length; i++) {

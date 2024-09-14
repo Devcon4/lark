@@ -47,5 +47,9 @@ public class LarkModel {
     foreach (var image in Images.Span) {
       image.Dispose(data);
     }
+
+    foreach (var material in Materials.Span) {
+      material.ORMTexture.Dispose(data);
+    }
   }
 }

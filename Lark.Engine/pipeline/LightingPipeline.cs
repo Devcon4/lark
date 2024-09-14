@@ -60,7 +60,8 @@ public class LightingPipeline(ILogger<LightingPipeline> logger, LightingPassData
     RegisterSet(Layouts.GBuffers, 0, [
       new LarkLayoutBindingInfo(DescriptorType.CombinedImageSampler, ShaderStageFlags.FragmentBit, 0),
       new LarkLayoutBindingInfo(DescriptorType.CombinedImageSampler, ShaderStageFlags.FragmentBit, 1),
-      new LarkLayoutBindingInfo(DescriptorType.CombinedImageSampler, ShaderStageFlags.FragmentBit, 2)
+      new LarkLayoutBindingInfo(DescriptorType.CombinedImageSampler, ShaderStageFlags.FragmentBit, 2),
+      new LarkLayoutBindingInfo(DescriptorType.CombinedImageSampler, ShaderStageFlags.FragmentBit, 3),
     ]);
 
     RegisterSet(Layouts.Lights, 1, [
@@ -109,6 +110,20 @@ public class LightingPipeline(ILogger<LightingPipeline> logger, LightingPassData
       DescriptorCount = 1,
       DescriptorType = DescriptorType.CombinedImageSampler,
       PImageInfo = &depthImageInfo
+    });
+
+    var ormImageInfo = new DescriptorImageInfo {
+      Sampler = geometryPass.ORM.Span[index].Sampler,
+      ImageView = geometryPass.ORM.Span[index].View,
+      ImageLayout = ImageLayout.ShaderReadOnlyOptimal
+    };
+
+    UpdateSet(Layouts.GBuffers, (uint)index, new WriteDescriptorSet {
+      SType = StructureType.WriteDescriptorSet,
+      DstBinding = 3,
+      DescriptorCount = 1,
+      DescriptorType = DescriptorType.CombinedImageSampler,
+      PImageInfo = &ormImageInfo
     });
   }
 
@@ -164,10 +179,12 @@ public class LightingPipeline(ILogger<LightingPipeline> logger, LightingPassData
     imageUtils.TransitionImageLayout(geometryPass.Images.Span[(int)index].Image, ImageLayout.ShaderReadOnlyOptimal, ImageLayout.ColorAttachmentOptimal, ImageAspectFlags.ColorBit);
     imageUtils.TransitionImageLayout(geometryPass.Normals.Span[(int)index].Image, ImageLayout.ShaderReadOnlyOptimal, ImageLayout.ColorAttachmentOptimal, ImageAspectFlags.ColorBit);
     imageUtils.TransitionImageLayout(geometryPass.Depth.Span[(int)index].Image, ImageLayout.ShaderReadOnlyOptimal, ImageLayout.DepthStencilAttachmentOptimal, ImageAspectFlags.DepthBit);
+    imageUtils.TransitionImageLayout(geometryPass.ORM.Span[(int)index].Image, ImageLayout.ShaderReadOnlyOptimal, ImageLayout.ColorAttachmentOptimal, ImageAspectFlags.ColorBit);
 
     geometryPass.Images.Span[(int)index].Layout = ImageLayout.ShaderReadOnlyOptimal;
     geometryPass.Normals.Span[(int)index].Layout = ImageLayout.ShaderReadOnlyOptimal;
     geometryPass.Depth.Span[(int)index].Layout = ImageLayout.ShaderReadOnlyOptimal;
+    geometryPass.ORM.Span[(int)index].Layout = ImageLayout.ShaderReadOnlyOptimal;
 
     // UpdateGBufferDescriptorSets((int)index);
     // BindGBufferDescriptorSets((int)index);
@@ -176,9 +193,6 @@ public class LightingPipeline(ILogger<LightingPipeline> logger, LightingPassData
 
     BindSet(Layouts.GBuffers, index);
     BindSet(Layouts.Lights, index);
-
-    logger.LogInformation("Drawing {count} lights.", shareData.lights.Count);
-    logger.LogInformation("Current light index: {currLight}", currLight);
 
     UpdatePushConstants(index, currLight);
     shareData.vk.CmdDraw(shareData.CommandBuffers[index], 6, 1, 0, 0);
@@ -209,6 +223,7 @@ public class LightingPipeline(ILogger<LightingPipeline> logger, LightingPassData
     geometryPass.Images.Span[index].Layout = ImageLayout.ColorAttachmentOptimal;
     geometryPass.Normals.Span[index].Layout = ImageLayout.ColorAttachmentOptimal;
     geometryPass.Depth.Span[index].Layout = ImageLayout.DepthStencilAttachmentOptimal;
+    geometryPass.ORM.Span[index].Layout = ImageLayout.ColorAttachmentOptimal;
   }
 
   private unsafe void UpdatePushConstants(uint index, int lightIndex) {
@@ -232,6 +247,7 @@ public class LightingPipeline(ILogger<LightingPipeline> logger, LightingPassData
     imageUtils.TransitionImageLayout(ref geometryPass.Images.Span[index], newLayout);
     imageUtils.TransitionImageLayout(ref geometryPass.Normals.Span[index], newLayout);
     imageUtils.TransitionImageLayout(ref geometryPass.Depth.Span[index], newLayout, ImageAspectFlags.DepthBit);
+    imageUtils.TransitionImageLayout(ref geometryPass.ORM.Span[index], newLayout);
   }
 
   // private unsafe void BindGBufferDescriptorSets(int frameIndex) {
@@ -576,7 +592,7 @@ public class LightingPipeline(ILogger<LightingPipeline> logger, LightingPassData
   }
 
   private unsafe void CreateDescriptorPool() {
-    var gbufferSize = (uint)(LarkVulkanData.MaxFramesInFlight * 3); // geo and normal and depth
+    var gbufferSize = (uint)(LarkVulkanData.MaxFramesInFlight * 4); // geo and normal and depth and orm
     var imageSize = (uint)LarkVulkanData.MaxFramesInFlight * 2;
     var poolSizes = stackalloc DescriptorPoolSize[] {
       new DescriptorPoolSize {

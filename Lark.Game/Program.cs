@@ -7,6 +7,7 @@ var builder = Host.CreateApplicationBuilder(args);
 
 builder.Services
   .AddLarkEngine(builder.Configuration)
+  .AddRenderDoc(builder.Configuration)
   .AddVulkanPipeline()
   .AddLarkECS()
   .AddLarkSTD()

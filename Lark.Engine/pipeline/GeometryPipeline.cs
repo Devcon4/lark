@@ -13,6 +13,7 @@ public class GeometryPassData() {
   public Memory<LarkImage> Images = new(new LarkImage[LarkVulkanData.MaxFramesInFlight]);
   public Memory<LarkImage> Normals = new(new LarkImage[LarkVulkanData.MaxFramesInFlight]);
   public Memory<LarkImage> Depth = new(new LarkImage[LarkVulkanData.MaxFramesInFlight]);
+  public Memory<LarkImage> ORM = new(new LarkImage[LarkVulkanData.MaxFramesInFlight]);
 }
 
 public class GeometryPipeline(ILogger<GeometryPipeline> logger, GeometryPassData geometryPass, LarkVulkanData shareData, ImageUtils imageUtils, ShaderBuilder shaderBuilder) : LarkPipeline(shareData) {
@@ -34,7 +35,8 @@ public class GeometryPipeline(ILogger<GeometryPipeline> logger, GeometryPassData
 
   public readonly struct Layouts() {
     public static readonly string Matricies = "Matrices";
-    public static readonly string Textures = "Textures";
+    public static readonly string Albedo = "Albedo";
+    public static readonly string MRO = "MRO";
   }
 
   public override unsafe void Draw(uint index) {
@@ -54,6 +56,7 @@ public class GeometryPipeline(ILogger<GeometryPipeline> logger, GeometryPassData
   private void TransitionGBufferImages(int index, ImageLayout newLayout) {
     imageUtils.TransitionImageLayout(ref geometryPass.Images.Span[index], newLayout);
     imageUtils.TransitionImageLayout(ref geometryPass.Normals.Span[index], newLayout);
+    imageUtils.TransitionImageLayout(ref geometryPass.ORM.Span[index], newLayout);
   }
 
   public unsafe override void Cleanup() {
@@ -125,6 +128,17 @@ public class GeometryPipeline(ILogger<GeometryPipeline> logger, GeometryPassData
         null
       );
 
+      shareData.vk.CmdBindDescriptorSets(
+        shareData.CommandBuffers[index],
+        PipelineBindPoint.Graphics,
+        Data.PipelineLayout,
+        2,
+        1,
+        model.Materials.Span[primitive.MaterialIndex].ormDescriptorSets.Span[(int)index],
+        0,
+        null
+      );
+
       shareData.vk.CmdDrawIndexed(shareData.CommandBuffers[index], (uint)primitive.IndexCount, 1, (uint)primitive.FirstIndex, 0, 0);
     }
   }
@@ -165,6 +179,9 @@ public class GeometryPipeline(ILogger<GeometryPipeline> logger, GeometryPassData
       },
       new() {
         Color = new ClearColorValue { Float32_0 = 0, Float32_1 = 0, Float32_2 = 0, Float32_3 = 0 }
+      },
+      new() {
+        Color = new ClearColorValue { Float32_0 = 0, Float32_1 = 0, Float32_2 = 0, Float32_3 = 0 }
       }
     ];
   }
@@ -181,6 +198,7 @@ public class GeometryPipeline(ILogger<GeometryPipeline> logger, GeometryPassData
     CreateGbufferPart(ref geometryPass.Images);
     CreateGbufferPart(ref geometryPass.Normals);
     CreateGbufferPart(ref geometryPass.Depth, ImageAspectFlags.DepthBit, imageUtils.FindDepthFormat(), ImageUsageFlags.InputAttachmentBit | ImageUsageFlags.SampledBit | ImageUsageFlags.DepthStencilAttachmentBit);
+    CreateGbufferPart(ref geometryPass.ORM);
   }
 
   private unsafe void CreateGbufferPart(ref Memory<LarkImage> images, ImageAspectFlags aspect = ImageAspectFlags.ColorBit, Format format = Format.B8G8R8A8Unorm, ImageUsageFlags usage = ImageUsageFlags.ColorAttachmentBit | ImageUsageFlags.InputAttachmentBit | ImageUsageFlags.SampledBit) {
@@ -191,7 +209,6 @@ public class GeometryPipeline(ILogger<GeometryPipeline> logger, GeometryPassData
       CreateGBufferSampler(ref images.Span[i].Sampler);
       // imageUtils.TransitionImageLayout(images.Span[i].Image, ImageLayout.Undefined, ImageLayout.ColorAttachmentOptimal);
     }
-
   }
 
   private unsafe void CreateGBufferSampler(ref Sampler GBufferSampler) {
@@ -221,7 +238,7 @@ public class GeometryPipeline(ILogger<GeometryPipeline> logger, GeometryPassData
     Data.Framebuffers = new Framebuffer[geometryPass.Images.Length];
 
     for (int i = 0; i < geometryPass.Images.Length; i++) {
-      var attachments = new[] { geometryPass.Images.Span[i].View, geometryPass.Depth.Span[i].View, geometryPass.Normals.Span[i].View };
+      var attachments = new[] { geometryPass.Images.Span[i].View, geometryPass.Depth.Span[i].View, geometryPass.Normals.Span[i].View, geometryPass.ORM.Span[i].View };
 
       var (attachmentMem, attachmentSize) = RegisterMemory(attachments);
 
@@ -280,7 +297,27 @@ public class GeometryPipeline(ILogger<GeometryPipeline> logger, GeometryPassData
       throw new Exception("failed to create descriptor set layout!");
     }
 
-    DescriptorSetLayouts.Add(Layouts.Textures, textureLayout);
+    DescriptorSetLayouts.Add(Layouts.Albedo, textureLayout);
+
+    var mroLayoutBinding = new DescriptorSetLayoutBinding {
+      Binding = 0,
+      DescriptorCount = 1,
+      DescriptorType = DescriptorType.CombinedImageSampler,
+      PImmutableSamplers = null,
+      StageFlags = ShaderStageFlags.FragmentBit
+    };
+
+    var mroLayoutInfo = new DescriptorSetLayoutCreateInfo {
+      SType = StructureType.DescriptorSetLayoutCreateInfo,
+      BindingCount = 1,
+      PBindings = &mroLayoutBinding
+    };
+
+    if (shareData.vk.CreateDescriptorSetLayout(shareData.Device, &mroLayoutInfo, null, out DescriptorSetLayout mroLayout) != Result.Success) {
+      throw new Exception("failed to create descriptor set layout!");
+    }
+
+    DescriptorSetLayouts.Add(Layouts.MRO, mroLayout);
 
     logger.LogInformation("Created descriptor set layouts.");
   }
@@ -298,6 +335,17 @@ public class GeometryPipeline(ILogger<GeometryPipeline> logger, GeometryPassData
     };
 
     var normalAttachment = new AttachmentDescription {
+      Format = shareData.SwapchainImageFormat,
+      Samples = SampleCountFlags.Count1Bit,
+      LoadOp = AttachmentLoadOp.Clear,
+      StoreOp = AttachmentStoreOp.Store,
+      StencilLoadOp = AttachmentLoadOp.DontCare,
+      StencilStoreOp = AttachmentStoreOp.DontCare,
+      InitialLayout = ImageLayout.Undefined,
+      FinalLayout = ImageLayout.ShaderReadOnlyOptimal
+    };
+
+    var ormAttachment = new AttachmentDescription {
       Format = shareData.SwapchainImageFormat,
       Samples = SampleCountFlags.Count1Bit,
       LoadOp = AttachmentLoadOp.Clear,
@@ -329,7 +377,12 @@ public class GeometryPipeline(ILogger<GeometryPipeline> logger, GeometryPassData
       Layout = ImageLayout.ColorAttachmentOptimal
     };
 
-    var colorAttachmentRefs = new[] { colorAttachmentRef, normalAttachmentRef };
+    var ormAttachmentRef = new AttachmentReference {
+      Attachment = 3,
+      Layout = ImageLayout.ColorAttachmentOptimal
+    };
+
+    var colorAttachmentRefs = new[] { colorAttachmentRef, normalAttachmentRef, ormAttachmentRef };
     var (colorAttachmentRefsMem, colorAttachmentRefsSize) = RegisterMemory(colorAttachmentRefs);
 
     var depthAttachmentRef = new AttachmentReference {
@@ -344,7 +397,7 @@ public class GeometryPipeline(ILogger<GeometryPipeline> logger, GeometryPassData
       PDepthStencilAttachment = &depthAttachmentRef
     };
 
-    var attachments = new[] { colorAttachment, depthAttachment, normalAttachment };
+    var attachments = new[] { colorAttachment, depthAttachment, normalAttachment, ormAttachment };
 
     var dependency = new SubpassDependency() {
       SrcSubpass = Vk.SubpassExternal,
@@ -477,7 +530,15 @@ public class GeometryPipeline(ILogger<GeometryPipeline> logger, GeometryPassData
         BlendEnable = Vk.False
       };
 
-      var attachments = new[] { colorBlendAttachment, normalBlendAttachment };
+      var ormBlendAttachment = new PipelineColorBlendAttachmentState {
+        ColorWriteMask = ColorComponentFlags.RBit |
+                           ColorComponentFlags.GBit |
+                           ColorComponentFlags.BBit |
+                           ColorComponentFlags.ABit,
+        BlendEnable = Vk.False
+      };
+
+      var attachments = new[] { colorBlendAttachment, normalBlendAttachment, ormBlendAttachment };
       var (attachmentsMem, attachmentsSize) = RegisterMemory(attachments);
 
       var colorBlending = new PipelineColorBlendStateCreateInfo {

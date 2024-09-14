@@ -59,6 +59,16 @@
     <MakeDir Directories=".\resources\models" />
   </Target>
 
+  <!-- Before Build;Publish check if resources/textures/brdf_lut.ktx exists; -->
+  <!-- If not use BRDFGenerator to create one -->
+  <Target Name="GenerateBRDFLUT" BeforeTargets="Build;Publish">
+    <ItemGroup>
+      <BRDFFile Include=".\resources\textures\brdf_lut.ktx" />
+    </ItemGroup>
+    <Exec Condition="!Exists('%(BRDFFile.FullPath)')" Command="BRDFGenerator.exe -f .\resources\textures\brdf_lut.ktx" />
+  </Target>
+
+
   <Target Name="CompileShaders" BeforeTargets="Build;Publish">
     <ItemGroup>
       <ShaderFiles Include=".\resources\shaders\**\*.*" />

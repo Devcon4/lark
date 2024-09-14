@@ -21,6 +21,10 @@ public class ImageUtils(LarkVulkanData data, BufferUtils bufferUtils, CommandUti
     CreateImage(rawImage, ref image, ref imageMemory);
   }
 
+  public unsafe void CreateTexture(Image<Rgba32> rawImage, ref Image image, ref DeviceMemory imageMemory) {
+    CreateImage(rawImage, ref image, ref imageMemory);
+  }
+
   public unsafe void CreateTexture(string textureName, ref Image image, ref DeviceMemory imageMemory) {
     var fullPath = Path.Join(Path.GetDirectoryName(AppContext.BaseDirectory), $"./resources/textures/{textureName}");
 

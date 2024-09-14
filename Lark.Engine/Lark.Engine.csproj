@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.HighPerformance" Version="8.2.2" />
+    <PackageReference Include="Evergine.Bindings.RenderDoc" Version="2024.9.4.17" />
     <PackageReference Include="ImpromptuNinjas.UltralightSharp" Version="1.2.0-beta-r11" />
     <PackageReference Include="JoltPhysicsSharp" Version="2.5.3" />
     <!-- <PackageReference Include="MagicPhysX" Version="1.0.0" /> -->

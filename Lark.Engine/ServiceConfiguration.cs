@@ -13,7 +13,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NodaTime;
 
 namespace Lark.Engine;
-public static class ServiceConfiguration {
+public static partial class ServiceConfiguration {
 
   // Managers can be injected directly.
   public static IServiceCollection AddLarkManager<T>(this IServiceCollection services) where T : LarkManager {
@@ -89,6 +89,12 @@ public static class ServiceConfiguration {
 
   //   return services;
   // }
+
+  public static IServiceCollection AddRenderDoc(this IServiceCollection services, IConfiguration configuration) {
+    services.Configure<RenderDocOptions>(configuration.GetSection("RenderDoc"));
+    services.AddLarkModule<LarkRenderDocModule>();
+    return services;
+  }
 
   public static IServiceCollection AddLarkEngine(this IServiceCollection services, IConfiguration configuration) {
     services.AddSingleton<Engine>();
