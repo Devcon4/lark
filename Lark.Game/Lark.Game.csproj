@@ -52,6 +52,16 @@
     <!-- <ProjectReference Include="..\..\MagicPhysX\src\MagicPhysX\MagicPhysX.csproj" /> Not needed when using Jolt -->
   </ItemGroup>
 
+  <!-- On restore run each script in the scripts folder. If on windows check scripts\win\*.ps1, else check scripts\linux\*.sh -->
+  <Target Name="RunScripts" BeforeTargets="Restore">
+    <ItemGroup>
+      <ScriptFiles Include="scripts\win\*.ps1" Condition="'$(OS)' == 'Windows_NT'" />
+      <ScriptFiles Include="scripts\linux\*.sh" Condition="'$(OS)' != 'Windows_NT'" />
+    </ItemGroup>
+    <Exec Command="powershell -ExecutionPolicy Bypass -File &quot;%(ScriptFiles.Identity)&quot;" Condition="'$(OS)' == 'Windows_NT'" />
+    <Exec Command="bash &quot;%(ScriptFiles.Identity)&quot;" Condition="'$(OS)' != 'Windows_NT'" />
+  </Target>
+
   <Target Name="MakeDir" BeforeTargets="Build">
     <MakeDir Directories=".\resources" />
     <MakeDir Directories=".\resources\shaders" />
